@@ -42,6 +42,13 @@ const int NNegThetaZoom = 40;
 const double dNegThetaZoom = 0.5;
 
 
+TFile deltaTMapCoarseFile("deltaTMapCoarse.root");  //  Because the files are opened outside of functions below, they aren't ever closed. As such, pointers to objects within them must be explicitly deleted when no longer in use, otherwise they will remain in memory.
+TFile deltaTMapFineFile("deltaTMapFine.root");
+
+TFile antSphericalCosineProductsCoarseFile("antSphericalCosineProductsCoarse.root");
+TFile antSphericalCosineProductsFineFile("antSphericalCosineProductsFine.root");
+
+
 /*
  * Get antenna pairs used to construct interferometric maps.
  */
@@ -86,20 +93,58 @@ void fillMapsPair(FilteredAnitaEvent * filtEvent, TH2D * responseMap, int ant1, 
 	//  Char associated with polarization.
 	const char * polChar = (pol == AnitaPol::kHorizontal) ? "H" : "V";
 
-	//  Accessing relevant TH2D objects.
-	TFile deltaTMapFile(TString::Format("deltaTMap%s.root", (NPhi == NPhiCoarse && NNegTheta == NNegThetaCoarse) ? "Coarse" : "Fine"));
-	TH2D * deltaTMap = (TH2D *) deltaTMapFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
-	if (!deltaTMap) {
+	//  Determine which pair of spherical cosines histogram to reference.
+		TH2D * deltaTMap = 0;
+		if (NPhi == NPhiCoarse && NNegTheta == NNegThetaCoarse) {
 
-		deltaTMap = (TH2D *) deltaTMapFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
-		deltaTMap -> Scale(-1);  //  Ordering is antisymmetric, here.
-	}
-//	deltaTMap -> SetDirectory(0);
+			deltaTMap = (TH2D *) deltaTMapCoarseFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
+	//		deltaTMap -> Scale(-1);  //  Testing reciprocity. Normally this is commented out.
 
-	TFile antSphericalCosineProductsFile(TString::Format("antSphericalCosineProducts%s.root", (NPhi == NPhiCoarse && NNegTheta == NNegThetaCoarse) ? "Coarse" : "Fine"));
-	TH2D * antSphCosProduct = (TH2D *) antSphericalCosineProductsFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
-	if (!antSphCosProduct) antSphCosProduct = (TH2D *) antSphericalCosineProductsFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
-//	antSphCosProduct -> SetDirectory(0);
+			if (!deltaTMap) {  //  Check if NULL pointer.
+
+				deltaTMap = (TH2D *) deltaTMapCoarseFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
+				deltaTMap -> Scale(-1);  //  Ordering is antisymmetric, here.
+			}
+
+		} else {
+
+			deltaTMap = (TH2D *) deltaTMapFineFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
+
+			if (!deltaTMap) {
+
+				deltaTMap = (TH2D *) deltaTMapFineFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
+				deltaTMap -> Scale(-1);
+			}
+		}
+
+		TH2D * antSphCosProduct = 0;
+		if (NPhi == NPhiCoarse && NNegTheta == NNegThetaCoarse) {
+
+			antSphCosProduct = (TH2D *) antSphericalCosineProductsCoarseFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
+
+			if (!antSphCosProduct) antSphCosProduct = (TH2D *) antSphericalCosineProductsCoarseFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
+
+		} else {
+
+			antSphCosProduct = (TH2D *) antSphericalCosineProductsFineFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
+
+			if (!antSphCosProduct) antSphCosProduct = (TH2D *) antSphericalCosineProductsFineFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
+		}
+
+//	//  Accessing relevant TH2D objects.
+//	TFile deltaTMapFile = (NPhi == NPhiCoarse && NNegTheta == NNegThetaCoarse) ? deltaTMapCoarseFile : deltaTMapFineFile;
+//	TH2D * deltaTMap = (TH2D *) deltaTMapFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
+//	if (!deltaTMap) {
+//
+//		deltaTMap = (TH2D *) deltaTMapFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
+//		deltaTMap -> Scale(-1);  //  Ordering is antisymmetric, here.
+//	}
+////	deltaTMap -> SetDirectory(0);
+//
+//	TFile antSphericalCosineProductsFile= (NPhi == NPhiCoarse && NNegTheta == NNegThetaCoarse) ? antSphericalCosineProductsCoarseFile : antSphericalCosineProductsFineFile;
+//	TH2D * antSphCosProduct = (TH2D *) antSphericalCosineProductsFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
+//	if (!antSphCosProduct) antSphCosProduct = (TH2D *) antSphericalCosineProductsFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
+////	antSphCosProduct -> SetDirectory(0);
 
 	//  Get index differences between reseponseMap and antSphCosProduct. Relevant for zoomed maps.
 	int dPhiIdx = int((responseMap -> GetXaxis() -> GetBinCenter(1) - deltaTMap -> GetXaxis() -> GetBinCenter(1)) / dPhiZoom);
@@ -140,8 +185,8 @@ void fillMapsPair(FilteredAnitaEvent * filtEvent, TH2D * responseMap, int ant1, 
 
 //	//  Delete pointers to file objects, then close the files.
 //	gROOT -> cd();
-//	delete deltaTMap;
-//	delete antSphCosProduct;
+	delete deltaTMap;
+	delete antSphCosProduct;
 //
 //	gROOT -> cd();
 //	deltaTMapFile.Close();
@@ -219,17 +264,30 @@ vector<TH2D> getTotalPowerMaps(FilteredAnitaEvent * filtEvent, bool isFine) {
 
 	gStyle -> SetOptStat(0);  //  To remove the legend reporting number of bins.
 
-	//  Accessing file from which to read histograms.
-	TFile antSphericalCosineProductsFile(TString::Format("antSphericalCosineProducts%s.root", isFine ? "Fine" : "Coarse"));
+//	//  Accessing file from which to read histograms.
+//	TFile antSphericalCosineProductsFile = isFine ? antSphericalCosineProductsFineFile : antSphericalCosineProductsCoarseFile;
 
 	#pragma omp parallel for
 	for (int i = 0; i < NUM_SEAVEYS; ++i) {
 
-		TH2D * hHist = (TH2D *) antSphericalCosineProductsFile.Get(TString::Format("H_%d_%d", i, i));
-//		hHist -> SetDirectory(0);
+		TH2D * hHist = 0, * vHist = 0;
 
-		TH2D * vHist = (TH2D *) antSphericalCosineProductsFile.Get(TString::Format("V_%d_%d", i, i));
-//		vHist -> SetDirectory(0);
+		if (isFine) {
+
+			hHist = (TH2D *) antSphericalCosineProductsFineFile.Get(TString::Format("H_%d_%d", i, i));
+			vHist = (TH2D *) antSphericalCosineProductsFineFile.Get(TString::Format("V_%d_%d", i, i));
+
+		} else {
+
+			hHist = (TH2D *) antSphericalCosineProductsCoarseFile.Get(TString::Format("H_%d_%d", i, i));
+			vHist = (TH2D *) antSphericalCosineProductsCoarseFile.Get(TString::Format("V_%d_%d", i, i));
+		}
+
+//		TH2D * hHist = (TH2D *) antSphericalCosineProductsFile.Get(TString::Format("H_%d_%d", i, i));
+////		hHist -> SetDirectory(0);
+//
+//		TH2D * vHist = (TH2D *) antSphericalCosineProductsFile.Get(TString::Format("V_%d_%d", i, i));
+////		vHist -> SetDirectory(0);
 
 		totalPowerMaps[i] = TH2D(TString::Format("Ant_%d", i), TString::Format("Ant_%d", i), NPhi, minPhi, maxPhi, NNegTheta, minNegTheta, maxNegTheta);
 		totalPowerMaps[i].Add(hHist, vHist, totalPowers[0][i], totalPowers[1][i]);
@@ -238,8 +296,8 @@ vector<TH2D> getTotalPowerMaps(FilteredAnitaEvent * filtEvent, bool isFine) {
 		totalPowerMaps[i].GetYaxis() -> SetTitle("-#theta");
 
 //		gROOT -> cd();
-//		delete hHist;
-//		delete vHist;
+		delete hHist;
+		delete vHist;
 	}
 
 //	//  Close the file.
@@ -767,13 +825,36 @@ void fillFlatMapsPair(FilteredAnitaEvent * filtEvent, TH2D * responseMap, int an
 	//  Char associated with polarization.
 	const char * polChar = (pol == AnitaPol::kHorizontal) ? "H" : "V";
 
-	TFile deltaTMapFile(TString::Format("deltaTMap%s.root", (NPhi == NPhiCoarse && NNegTheta == NNegThetaCoarse) ? "Coarse" : "Fine"));
-	TH2D * deltaTMap = (TH2D *) deltaTMapFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
-	if (!deltaTMap) {
+	//  Determine which pair of spherical cosines histogram to reference.
+	TH2D * deltaTMap = 0;
+	if (NPhi == NPhiCoarse && NNegTheta == NNegThetaCoarse) {
 
-		deltaTMap = (TH2D *) deltaTMapFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
-		deltaTMap -> Scale(-1);  //  Ordering is antisymmetric, here.
+		deltaTMap = (TH2D *) deltaTMapCoarseFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
+
+		if (!deltaTMap) {  //  Check if NULL pointer.
+
+			deltaTMap = (TH2D *) deltaTMapCoarseFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
+			deltaTMap -> Scale(-1);  //  Ordering is antisymmetric here.
+		}
+
+	} else {
+
+		deltaTMap = (TH2D *) deltaTMapFineFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
+
+		if (!deltaTMap) {
+
+			deltaTMap = (TH2D *) deltaTMapFineFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
+			deltaTMap -> Scale(-1);
+		}
 	}
+
+//	TFile deltaTMapFile = (NPhi == NPhiCoarse && NNegTheta == NNegThetaCoarse) ? deltaTMapCoarseFile : deltaTMapFineFile;
+//	TH2D * deltaTMap = (TH2D *) deltaTMapFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
+//	if (!deltaTMap) {
+//
+//		deltaTMap = (TH2D *) deltaTMapFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
+//		deltaTMap -> Scale(-1);  //  Ordering is antisymmetric, here.
+//	}
 //	deltaTMap -> SetDirectory(0);
 
 	//  Get index differences between reseponseMap and antSphCosProduct. Relevant for zoomed maps.
@@ -811,7 +892,7 @@ void fillFlatMapsPair(FilteredAnitaEvent * filtEvent, TH2D * responseMap, int an
 
 	//  Delete file object, then close file.
 //	gROOT -> cd();
-//	delete deltaTMap;
+	delete deltaTMap;
 //
 //	gROOT -> cd();
 //	deltaTMapFile.Close();
