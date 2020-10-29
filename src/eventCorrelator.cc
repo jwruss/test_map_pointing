@@ -94,42 +94,46 @@ void fillMapsPair(FilteredAnitaEvent * filtEvent, TH2D * responseMap, int ant1, 
 	const char * polChar = (pol == AnitaPol::kHorizontal) ? "H" : "V";
 
 	//  Determine which pair of spherical cosines histogram to reference.
-		TH2D * deltaTMap = 0;
-		if (NPhi == NPhiCoarse && NNegTheta == NNegThetaCoarse) {
+	TH2D * deltaTMap = 0;
+	if (NPhi == NPhiCoarse && NNegTheta == NNegThetaCoarse) {
 
-			deltaTMap = (TH2D *) deltaTMapCoarseFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
-	//		deltaTMap -> Scale(-1);  //  Testing reciprocity. Normally this is commented out.
+		deltaTMap = (TH2D *) deltaTMapCoarseFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
+//		deltaTMap -> Scale(-1);  //  Testing reciprocity. Normally this is commented out.
 
-			if (!deltaTMap) {  //  Check if NULL pointer.
+		if (!deltaTMap) {  //  Check if NULL pointer.
 
-				deltaTMap = (TH2D *) deltaTMapCoarseFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
-				deltaTMap -> Scale(-1);  //  Ordering is antisymmetric, here.
-			}
-
-		} else {
-
-			deltaTMap = (TH2D *) deltaTMapFineFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
-
-			if (!deltaTMap) {
-
-				deltaTMap = (TH2D *) deltaTMapFineFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
-				deltaTMap -> Scale(-1);
-			}
+			deltaTMap = (TH2D *) deltaTMapCoarseFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
+			deltaTMap -> Scale(-1);  //  Ordering is antisymmetric, here.
 		}
 
-		TH2D * antSphCosProduct = 0;
-		if (NPhi == NPhiCoarse && NNegTheta == NNegThetaCoarse) {
+	} else {
 
-			antSphCosProduct = (TH2D *) antSphericalCosineProductsCoarseFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
+		deltaTMap = (TH2D *) deltaTMapFineFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
 
-			if (!antSphCosProduct) antSphCosProduct = (TH2D *) antSphericalCosineProductsCoarseFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
+		if (!deltaTMap) {
 
-		} else {
-
-			antSphCosProduct = (TH2D *) antSphericalCosineProductsFineFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
-
-			if (!antSphCosProduct) antSphCosProduct = (TH2D *) antSphericalCosineProductsFineFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
+			deltaTMap = (TH2D *) deltaTMapFineFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
+			deltaTMap -> Scale(-1);
 		}
+	}
+
+	deltaTMap -> SetDirectory(0);
+
+	TH2D * antSphCosProduct = 0;
+	if (NPhi == NPhiCoarse && NNegTheta == NNegThetaCoarse) {
+
+		antSphCosProduct = (TH2D *) antSphericalCosineProductsCoarseFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
+
+		if (!antSphCosProduct) antSphCosProduct = (TH2D *) antSphericalCosineProductsCoarseFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
+
+	} else {
+
+		antSphCosProduct = (TH2D *) antSphericalCosineProductsFineFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
+
+		if (!antSphCosProduct) antSphCosProduct = (TH2D *) antSphericalCosineProductsFineFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
+	}
+
+	antSphCosProduct -> SetDirectory(0);
 
 //	//  Accessing relevant TH2D objects.
 //	TFile deltaTMapFile = (NPhi == NPhiCoarse && NNegTheta == NNegThetaCoarse) ? deltaTMapCoarseFile : deltaTMapFineFile;
@@ -282,6 +286,9 @@ vector<TH2D> getTotalPowerMaps(FilteredAnitaEvent * filtEvent, bool isFine) {
 			hHist = (TH2D *) antSphericalCosineProductsCoarseFile.Get(TString::Format("H_%d_%d", i, i));
 			vHist = (TH2D *) antSphericalCosineProductsCoarseFile.Get(TString::Format("V_%d_%d", i, i));
 		}
+
+		hHist -> SetDirectory(0);
+		vHist -> SetDirectory(0);
 
 //		TH2D * hHist = (TH2D *) antSphericalCosineProductsFile.Get(TString::Format("H_%d_%d", i, i));
 ////		hHist -> SetDirectory(0);
@@ -847,6 +854,8 @@ void fillFlatMapsPair(FilteredAnitaEvent * filtEvent, TH2D * responseMap, int an
 			deltaTMap -> Scale(-1);
 		}
 	}
+
+	deltaTMap -> SetDirectory(0);
 
 //	TFile deltaTMapFile = (NPhi == NPhiCoarse && NNegTheta == NNegThetaCoarse) ? deltaTMapCoarseFile : deltaTMapFineFile;
 //	TH2D * deltaTMap = (TH2D *) deltaTMapFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
