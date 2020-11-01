@@ -26,31 +26,58 @@ using namespace std;
 #include "AnitaVersion.h"
 #include "TFile.h"
 #include "TSpline.h"
-#include "TROOT.h"
+#include "TCollection.h"
+#include "TKey.h"
+//#include "TROOT.h"
+
+
+/*
+ * Return coarsely-binned histogram of time delays between antenna baselines.
+ */
+TH2F * getDeltaTCoarse(const char * mapName);
+
+
+/*
+ * Return finely-binned histogram of time delays between antenna baselines.
+ */
+TH2F * getDeltaTFine(const char * mapName);
+
+
+/*
+ * Return coarsely-binned histogram of spherical cosine products between antenna baselines.
+ */
+TH2F * getSphCosProductCoarse(const char * mapName);
+
+
+/*
+ * Return finely-binned histogram of spherical cosine products between antenna baselines.
+ */
+TH2F * getSphCosProductFine(const char * mapName);
 
 
 /*
  * Get antenna pairs used to construct interferometric maps.
  */
-vector<vector<int>> getAntennaPairs(vector<int> neighboringAntennas = {});
+vector<pair<int, int>> getAntennaPairs(vector<int> neighboringAntennas = {});
+
 
 /*
  * Given an event, construct the cross-correlation between two antennas for a given polarization.
  */
-void fillMapsPair(FilteredAnitaEvent * filtEvent, TH2D * responseMap, int ant1, int ant2, AnitaPol::AnitaPol_t pol);
+void fillPairMap(FilteredAnitaEvent * filtEvent, TH2D * responseMap, pair<int, int> antPair, AnitaPol::AnitaPol_t pol);
 
 
 /*
- * Function which iteratively calls "fillMapsPair()" for all relevant antenna pairs, up to two phi sectors apart.
+ * Function which iteratively calls "fillPairMap()" for all relevant antenna pairs, up to two phi sectors apart.
  */
-void fillMapsAll(FilteredAnitaEvent * filtEvent, TH2D * responseMap, AnitaPol::AnitaPol_t pol, vector<int> neighboringAntennas = {});
+void fillAllMaps(FilteredAnitaEvent * filtEvent, TH2D * responseMap, AnitaPol::AnitaPol_t pol, vector<int> neighboringAntennas = {});
 
 
 /*
- * For a given event, return a 2-dimensional vector containing sums of square voltages for each antenna. Vector has dimensions of
- * [2][NUM_SEAVEYS]. where first index corresponds to 0 for Hpol, 1 for Vpol.
+ * For a given event, return a vector containing sums of square voltages for each antenna. Vector has dimensions of
+ * [NUM_SEAVEYS][2]. where second index corresponds to 0 for Hpol, 1 for Vpol.
  */
-vector<vector<double>> getEventTotalPowers(FilteredAnitaEvent * filtEvent);
+vector<pair<double, double>> getEventTotalPowers(FilteredAnitaEvent * filtEvent);
 
 
 /*
@@ -64,22 +91,23 @@ vector<TH2D> getTotalPowerMaps(FilteredAnitaEvent * filtEvent, bool isFine = fal
 /*
  * Each antenna cross-correlation has an upper bound given by the Cauchy-Schwarz inequality. The upper bound here is over both horizontal and vertical polarization.
  */
-void fillCoverageMapsPair(TH2D * coverageMap, vector<TH2D> totalPowerMaps, int ant1, int ant2);
+void fillPairCoverageMap(TH2D * coverageMap, vector<TH2D> totalPowerMaps, pair<int, int> antPair);
 
 
 /*
- * Function which iteratively calls "fillCoverageMapsPair()" for all relevant antenna pairs, up to two phi sectors apart.
+ * Function which iteratively calls "fillPairCoverageMap()" for all relevant antenna pairs, up to two phi sectors apart.
  */
-void fillCoverageMapsAll(TH2D * coverageMap, vector<TH2D> totalPowerMaps, vector<int> neighboringAntennas = {});
+void fillAllCoverageMaps(TH2D * coverageMap, vector<TH2D> totalPowerMaps, vector<int> neighboringAntennas = {});
+
 
 /*
- * For a given event, calls to "fillMapsAll()" to construct corresponding unnormalized interferoemtric maps.
+ * For a given event, calls to "fillAllMaps()" to construct corresponding unnormalized interferoemtric maps.
  */
 vector<TH2D> makeUnnormalizedEventInterferometricMaps(int eventNum, bool useBroadband = false, TString filterString = "sinsub_10_3_ad_2", int anitaVer = AnitaVersion::get(), int iceMCRun = 0);
 
 
 /*
- * For a given event, calls to "fillMapsAll()" and "fillCoverageMapsAll()" to construct corresponding interferometric maps.
+ * For a given event, calls to "fillAllMaps()" and "fillAllCoverageMaps()" to construct corresponding interferometric maps.
  */
 vector<TH2D> makeEventInterferometricMaps(int eventNum, bool useBroadband = false, TString filterString = "sinsub_10_3_ad_2", int anitaVer = AnitaVersion::get(), int iceMCRun = 0);
 
@@ -125,19 +153,20 @@ TH2D makePeakInterferometricMap(int eventNum, double peakPhi, double peakNegThet
  * For purposes of testing noncoplanar baselines, create cross-correlation
  * interferometric maps without curvature correction.
  */
-void fillFlatMapsPair(FilteredAnitaEvent * filtEvent, TH2D * responseMap, int ant1, int ant2, AnitaPol::AnitaPol_t pol);
+void fillPairFlatMap(FilteredAnitaEvent * filtEvent, TH2D * responseMap, pair<int, int> antPair, AnitaPol::AnitaPol_t pol);
+
 
 /*
  * Function which iteratively calls "fillMapsFlatPair()" for all relevant antenna pairs, up to two phi sectors apart.
  */
-void fillFlatMapsAll(FilteredAnitaEvent * filtEvent, TH2D * responseMap, AnitaPol::AnitaPol_t pol, vector<int> neighboringAntennas = {});
+void fillAllFlatMaps(FilteredAnitaEvent * filtEvent, TH2D * responseMap, AnitaPol::AnitaPol_t pol, vector<int> neighboringAntennas = {});
 
 
 /*
- * Same principal as fillCoverageMapsPair(), but no curvature included.
+ * Same principal as fillPairCoverageMap(), but no curvature included.
  * But rather than an input of vector<TH2D> totalPowerMaps, use vector<vector<double>> totalPowers.
  */
-void fillFlatCoverageMapsPair(TH2D * coverageMap, vector<vector<double>> totalPowers, int ant1, int ant2);
+void fillPairFlatCoverageMap(TH2D * coverageMap, vector<vector<double>> totalPowers, pair<int, int> antPair);
 
 
 /*

@@ -42,17 +42,126 @@ const int NNegThetaZoom = 40;
 const double dNegThetaZoom = 0.5;
 
 
-TFile deltaTMapCoarseFile("deltaTMapCoarse.root");  //  Because the files are opened outside of functions below, they aren't ever closed. As such, pointers to objects within them must be explicitly deleted when no longer in use, otherwise they will remain in memory.
-TFile deltaTMapFineFile("deltaTMapFine.root");
+/*
+ * Return coarsely-binned histogram of time delays between antenna baselines.
+ */
+TH2F * getDeltaTCoarse(const char * mapName) {
 
-TFile antSphericalCosineProductsCoarseFile("antSphericalCosineProductsCoarse.root");
-TFile antSphericalCosineProductsFineFile("antSphericalCosineProductsFine.root");
+	static std::map<const char*, TH2F *> deltaTCoarseMap;
+
+	if (deltaTCoarseMap.empty()) {
+
+		#pragma omp critical
+		if (deltaTCoarseMap.empty()) {  //  According to Cosmin, the purpose of the double guard is to first check if another thread is filling the map, then to ensure that it has been filled in the current thread.
+
+			TFile deltaTCoarseFile("deltaTCoarse.root");
+			TIter next(deltaTCoarseFile.GetListOfKeys());    //  Method of looping over objects in ROOT binary from https://root.cern.ch/root/htmldoc/tutorials/io/loopdir.C.html
+			TKey * key;
+
+			while (key = (TKey *) next()) {
+
+				TH2F * deltaT = (TH2F *) key -> ReadObj();
+
+				deltaTCoarseMap.insert(std::make_pair(deltaT -> GetName(), deltaT));  //  This method of loading filling in the map from https://thispointer.com/stdmap-tutorial-part-1-usage-detail-with-examples/
+			}
+		}
+	}
+
+	return deltaTCoarseMap[mapName];
+}
+
+
+/*
+ * Return finely-binned histogram of time delays between antenna baselines.
+ */
+TH2F * getDeltaTFine(const char * mapName) {
+
+	static std::map<TString, TH2F *> deltaTFineMap;
+
+	if (deltaTFineMap.empty()) {
+
+		#pragma omp critical
+		if (deltaTFineMap.empty()) {
+
+			TFile deltaTFineFile("deltaTFine.root");
+			TIter next(deltaTFineFile.GetListOfKeys());
+			TKey * key;
+
+			while (key = (TKey *) next()) {
+
+				TH2F * deltaT = (TH2F *) key -> ReadObj();
+
+				deltaTFineMap.insert(std::make_pair(deltaT -> GetName(), deltaT));
+			}
+		}
+	}
+
+	return deltaTFineMap[mapName];
+}
+
+
+/*
+ * Return coarsely-binned histogram of spherical cosine products between antenna baselines.
+ */
+TH2F * getSphCosProductCoarse(const char * mapName) {
+
+	static std::map<TString, TH2F *> sphCosProductCoarseMap;
+
+	if (sphCosProductCoarseMap.empty()) {
+
+		#pragma omp critical
+		if (sphCosProductCoarseMap.empty()) {
+
+			TFile sphCosProductCoarseFile("sphCosProductCoarse.root");
+			TIter next(sphCosProductCoarseFile.GetListOfKeys());
+			TKey * key;
+
+			while (key = (TKey *) next()) {
+
+				TH2F * sphCosProduct = (TH2F *) key -> ReadObj();
+
+				sphCosProductCoarseMap.insert(std::make_pair(sphCosProduct -> GetName(), sphCosProduct));
+			}
+		}
+	}
+
+	return sphCosProductCoarseMap[mapName];
+}
+
+
+/*
+ * Return finely-binned histogram of spherical cosine products between antenna baselines.
+ */
+TH2F * getSphCosProductFine(const char * mapName) {
+
+	static std::map<TString, TH2F *> sphCosProductFineMap;
+
+	if (sphCosProductFineMap.empty()) {
+
+		#pragma omp critical
+		if (sphCosProductFineMap.empty()) {
+
+			TFile sphCosProductFineFile("sphCosProductFine.root");
+			TIter next(sphCosProductFineFile.GetListOfKeys());
+			TKey * key;
+
+			while (key = (TKey *) next()) {
+
+				TH2F * sphCosProduct = (TH2F *) key -> ReadObj();
+
+				sphCosProductFineMap.insert(std::make_pair(sphCosProduct -> GetName(), sphCosProduct));
+			}
+		}
+	}
+
+	return sphCosProductFineMap[mapName];
+}
 
 
 /*
  * Get antenna pairs used to construct interferometric maps.
  */
-vector<vector<int>> getAntennaPairs(vector<int> neighboringAntennas) {
+vector<pair<int, int>> getAntennaPairs(vector<int> neighboringAntennas) {
 
 	//  Check if all neighboring antennas allowed.
 	if (neighboringAntennas.empty()) {
@@ -61,7 +170,7 @@ vector<vector<int>> getAntennaPairs(vector<int> neighboringAntennas) {
 		for (int i = 0; i < NUM_SEAVEYS; ++i) neighboringAntennas[i] = i;
 	}
 
-	vector<vector<int>> antennaPairs;  //  Where antenna pairs will be placed.
+	vector<pair<int, int>> antennaPairs;  //  Where antenna pairs will be placed.
 
 	//  Nested for loop which fills the antennaPairs vector.
 	for (int i = 0; i < neighboringAntennas.size(); ++i) {
@@ -72,7 +181,7 @@ vector<vector<int>> getAntennaPairs(vector<int> neighboringAntennas) {
 			phiSep = min(phiSep, NUM_PHI - phiSep);
 			if (phiSep > 2) continue;  //  Exclude pairs more than 2 phi sectors apart.
 
-			antennaPairs.push_back({neighboringAntennas[i], neighboringAntennas[j]});
+			antennaPairs.push_back(make_pair(neighboringAntennas[i], neighboringAntennas[j]));
 		}
 	}
 
@@ -81,10 +190,9 @@ vector<vector<int>> getAntennaPairs(vector<int> neighboringAntennas) {
 
 
 /*
- * Given an event, cons	antSphericalCosineProductsFile.Close();
- * truct the cross-correlation between two antennas for a given polarization.
+ * Given an event, construct the cross-correlation between two antennas for a given polarization.
  */
-void fillMapsPair(FilteredAnitaEvent * filtEvent, TH2D * responseMap, int ant1, int ant2, AnitaPol::AnitaPol_t pol) {
+void fillPairMap(FilteredAnitaEvent * filtEvent, TH2D * responseMap, pair<int, int> antPair, AnitaPol::AnitaPol_t pol) {
 
 	//  Check dimensions of responseMap, to determine which spherical cosine pair file to reference.
 	int NPhi = responseMap -> GetNbinsX();
@@ -94,46 +202,46 @@ void fillMapsPair(FilteredAnitaEvent * filtEvent, TH2D * responseMap, int ant1, 
 	const char * polChar = (pol == AnitaPol::kHorizontal) ? "H" : "V";
 
 	//  Determine which pair of spherical cosines histogram to reference.
-	TH2D * deltaTMap = 0;
+	TH2F * deltaTMap = 0;
 	if (NPhi == NPhiCoarse && NNegTheta == NNegThetaCoarse) {
 
-		deltaTMap = (TH2D *) deltaTMapCoarseFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
+		deltaTMap = getDeltaTCoarse(TString::Format("%s_%d_%d", polChar, antPair.first, antPair.second).Data());
 //		deltaTMap -> Scale(-1);  //  Testing reciprocity. Normally this is commented out.
 
 		if (!deltaTMap) {  //  Check if NULL pointer.
 
-			deltaTMap = (TH2D *) deltaTMapCoarseFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
+			deltaTMap = getDeltaTCoarse(TString::Format("%s_%d_%d", polChar, antPair.second, antPair.first).Data());
 			deltaTMap -> Scale(-1);  //  Ordering is antisymmetric, here.
 		}
 
 	} else {
 
-		deltaTMap = (TH2D *) deltaTMapFineFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
+		deltaTMap = getDeltaTFine(TString::Format("%s_%d_%d", polChar, antPair.first, antPair.second).Data());
 
 		if (!deltaTMap) {
 
-			deltaTMap = (TH2D *) deltaTMapFineFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
+			deltaTMap = getDeltaTFine(TString::Format("%s_%d_%d", polChar, antPair.second, antPair.first).Data());
 			deltaTMap -> Scale(-1);
 		}
 	}
 
-	deltaTMap -> SetDirectory(0);
+//	deltaTMap -> SetDirectory(0);
 
-	TH2D * antSphCosProduct = 0;
+	TH2F * sphCosProduct = 0;
 	if (NPhi == NPhiCoarse && NNegTheta == NNegThetaCoarse) {
 
-		antSphCosProduct = (TH2D *) antSphericalCosineProductsCoarseFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
+		sphCosProduct = getSphCosProductCoarse(TString::Format("%s_%d_%d", polChar, antPair.first, antPair.second).Data());
 
-		if (!antSphCosProduct) antSphCosProduct = (TH2D *) antSphericalCosineProductsCoarseFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
+		if (!sphCosProduct) sphCosProduct= getSphCosProductCoarse(TString::Format("%s_%d_%d", polChar, antPair.second, antPair.first).Data());
 
 	} else {
 
-		antSphCosProduct = (TH2D *) antSphericalCosineProductsFineFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
+		sphCosProduct = getSphCosProductFine(TString::Format("%s_%d_%d", polChar, antPair.first, antPair.second).Data());
 
-		if (!antSphCosProduct) antSphCosProduct = (TH2D *) antSphericalCosineProductsFineFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
+		if (!sphCosProduct) sphCosProduct = getSphCosProductFine(TString::Format("%s_%d_%d", polChar, antPair.second, antPair.first).Data());
 	}
 
-	antSphCosProduct -> SetDirectory(0);
+//	sphCosProduct -> SetDirectory(0);
 
 //	//  Accessing relevant TH2D objects.
 //	TFile deltaTMapFile = (NPhi == NPhiCoarse && NNegTheta == NNegThetaCoarse) ? deltaTMapCoarseFile : deltaTMapFineFile;
@@ -146,17 +254,17 @@ void fillMapsPair(FilteredAnitaEvent * filtEvent, TH2D * responseMap, int ant1, 
 ////	deltaTMap -> SetDirectory(0);
 //
 //	TFile antSphericalCosineProductsFile= (NPhi == NPhiCoarse && NNegTheta == NNegThetaCoarse) ? antSphericalCosineProductsCoarseFile : antSphericalCosineProductsFineFile;
-//	TH2D * antSphCosProduct = (TH2D *) antSphericalCosineProductsFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
-//	if (!antSphCosProduct) antSphCosProduct = (TH2D *) antSphericalCosineProductsFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
-////	antSphCosProduct -> SetDirectory(0);
+//	TH2D * sphCosProduct = (TH2D *) antSphericalCosineProductsFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
+//	if (!sphCosProduct) sphCosProduct = (TH2D *) antSphericalCosineProductsFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
+////	sphCosProduct -> SetDirectory(0);
 
-	//  Get index differences between reseponseMap and antSphCosProduct. Relevant for zoomed maps.
+	//  Get index differences between reseponseMap and sphCosProduct. Relevant for zoomed maps.
 	int dPhiIdx = int((responseMap -> GetXaxis() -> GetBinCenter(1) - deltaTMap -> GetXaxis() -> GetBinCenter(1)) / dPhiZoom);
 	int dNegThetaIdx = int((responseMap -> GetYaxis() -> GetBinCenter(1) - deltaTMap -> GetYaxis() -> GetBinCenter(1)) / dNegThetaZoom);
 
 	//  Setting up waveforms and correlations to be used in interferometric map.
-	TGraph waveformAnt1 = TGraph(* filtEvent -> getFilteredGraph(ant1, pol) -> even());
-	TGraph waveformAnt2 = TGraph(* filtEvent -> getFilteredGraph(ant2, pol) -> even());
+	TGraph waveformAnt1 = TGraph(* filtEvent -> getFilteredGraph(antPair.first, pol) -> even());
+	TGraph waveformAnt2 = TGraph(* filtEvent -> getFilteredGraph(antPair.second, pol) -> even());
 
 	TGraph crossCorr = getCorrGraph(& waveformAnt1, & waveformAnt2);
 	crossCorr.SetBit(TGraph::kIsSortedX);  //  This should significantly expedite interpolation.
@@ -168,7 +276,7 @@ void fillMapsPair(FilteredAnitaEvent * filtEvent, TH2D * responseMap, int ant1, 
 
 		for (int negThetaIdx = 1; negThetaIdx <= NNegTheta; ++negThetaIdx) {
 
-			double rho = antSphCosProduct -> GetBinContent(phiIdx + dPhiIdx, negThetaIdx + dNegThetaIdx);
+			double rho = sphCosProduct -> GetBinContent(phiIdx + dPhiIdx, negThetaIdx + dNegThetaIdx);
 
 			if (rho <= 0) continue;  //  Reference the spherical cosine pair to determine if bin should be filled.
 
@@ -182,15 +290,15 @@ void fillMapsPair(FilteredAnitaEvent * filtEvent, TH2D * responseMap, int ant1, 
 			double responseBinContent = responseMap -> GetBinContent(responseBinIdx);
 			responseMap -> SetBinContent(responseBinIdx, responseBinContent);
 
-			if (ant1 != ant2) responseMap -> AddBinContent(responseBinIdx, rho * response);
+			if (antPair.first != antPair.second) responseMap -> AddBinContent(responseBinIdx, rho * response);
 			else responseMap -> AddBinContent(responseBinIdx, rho * response / 2);
 		}
 	}
 
 //	//  Delete pointers to file objects, then close the files.
 //	gROOT -> cd();
-	delete deltaTMap;
-	delete antSphCosProduct;
+//	delete deltaTMap;
+//	delete sphCosProduct;
 //
 //	gROOT -> cd();
 //	deltaTMapFile.Close();
@@ -201,10 +309,10 @@ void fillMapsPair(FilteredAnitaEvent * filtEvent, TH2D * responseMap, int ant1, 
 /*
  * Function which iteratively calls "fillMapsPair()" for all relevant antenna pairs, up to two phi sectors apart.
  */
-void fillMapsAll(FilteredAnitaEvent * filtEvent, TH2D * responseMap, AnitaPol::AnitaPol_t pol, vector<int> neighboringAntennas) {
+void fillAllMaps(FilteredAnitaEvent * filtEvent, TH2D * responseMap, AnitaPol::AnitaPol_t pol, vector<int> neighboringAntennas) {
 
 	//  Establish antenna pairs to be use.
-	vector<vector<int>> antennaPairs = getAntennaPairs(neighboringAntennas);
+	vector<pair<int, int>> antennaPairs = getAntennaPairs(neighboringAntennas);
 
 	//  Create vector array in which to place each antenna pair response.
 	vector<TH2D> mapPair(antennaPairs.size());
@@ -214,7 +322,7 @@ void fillMapsAll(FilteredAnitaEvent * filtEvent, TH2D * responseMap, AnitaPol::A
 
 	//  Fill the antenna pair histograms. This loop should be embarrassingly parallel.
 	#pragma omp parallel for
-	for (int i = 0; i < antennaPairs.size(); ++i) fillMapsPair(filtEvent, & mapPair[i], antennaPairs[i][0], antennaPairs[i][1], pol);
+	for (int i = 0; i < antennaPairs.size(); ++i) fillPairMap(filtEvent, & mapPair[i], antennaPairs[i], pol);
 
 	//  Add the histograms together.
 	for (int i = 0; i < antennaPairs.size(); ++i) responseMap -> Add(& mapPair[i]);
@@ -228,9 +336,9 @@ void fillMapsAll(FilteredAnitaEvent * filtEvent, TH2D * responseMap, AnitaPol::A
  * For a given event, return a 2-dimensional vector containing sums of square voltages for each antenna. Vector has dimensions of
  * [2][NUM_SEAVEYS]. where first index corresponds to 0 for Hpol, 1 for Vpol.
  */
-vector<vector<double>> getEventTotalPowers(FilteredAnitaEvent * filtEvent) {
+vector<pair<double, double>> getEventTotalPowers(FilteredAnitaEvent * filtEvent) {
 
-	vector<vector<double>> totalPower(2, vector<double>(NUM_SEAVEYS));
+	vector<pair<double, double>> totalPower(NUM_SEAVEYS);
 
 	#pragma omp parallel for
 	for (int i = 0; i < NUM_SEAVEYS; ++i) {
@@ -238,8 +346,8 @@ vector<vector<double>> getEventTotalPowers(FilteredAnitaEvent * filtEvent) {
 		TGraph waveformAntH = TGraph(* filtEvent -> getFilteredGraph(i, AnitaPol::kHorizontal) -> even());
 		TGraph waveformAntV = TGraph(* filtEvent -> getFilteredGraph(i, AnitaPol::kVertical) -> even());
 
-		for (int j = 0; j < waveformAntH.GetN(); ++j) totalPower[0][i] += waveformAntH.GetY()[j] * waveformAntH.GetY()[j];
-		for (int j = 0; j < waveformAntV.GetN(); ++j) totalPower[1][i] += waveformAntV.GetY()[j] * waveformAntV.GetY()[j];
+		for (int j = 0; j < waveformAntH.GetN(); ++j) totalPower[i].first += waveformAntH.GetY()[j] * waveformAntH.GetY()[j];
+		for (int j = 0; j < waveformAntV.GetN(); ++j) totalPower[i].second += waveformAntV.GetY()[j] * waveformAntV.GetY()[j];
 	}
 
 	return totalPower;
@@ -254,7 +362,7 @@ vector<vector<double>> getEventTotalPowers(FilteredAnitaEvent * filtEvent) {
 vector<TH2D> getTotalPowerMaps(FilteredAnitaEvent * filtEvent, bool isFine) {
 
 	//  Get total powers to be used.
-	vector<vector<double>> totalPowers = getEventTotalPowers(filtEvent);
+	vector<pair<double, double>> totalPowers = getEventTotalPowers(filtEvent);
 
 	vector<TH2D> totalPowerMaps(NUM_SEAVEYS);
 
@@ -274,21 +382,21 @@ vector<TH2D> getTotalPowerMaps(FilteredAnitaEvent * filtEvent, bool isFine) {
 	#pragma omp parallel for
 	for (int i = 0; i < NUM_SEAVEYS; ++i) {
 
-		TH2D * hHist = 0, * vHist = 0;
+		TH2F * hHist = 0, * vHist = 0;
 
 		if (isFine) {
 
-			hHist = (TH2D *) antSphericalCosineProductsFineFile.Get(TString::Format("H_%d_%d", i, i));
-			vHist = (TH2D *) antSphericalCosineProductsFineFile.Get(TString::Format("V_%d_%d", i, i));
+			hHist = getSphCosProductFine(TString::Format("H_%d_%d", i, i).Data());
+			vHist = getSphCosProductFine(TString::Format("V_%d_%d", i, i).Data());
 
 		} else {
 
-			hHist = (TH2D *) antSphericalCosineProductsCoarseFile.Get(TString::Format("H_%d_%d", i, i));
-			vHist = (TH2D *) antSphericalCosineProductsCoarseFile.Get(TString::Format("V_%d_%d", i, i));
+			hHist = getSphCosProductCoarse(TString::Format("H_%d_%d", i, i).Data());
+			vHist = getSphCosProductCoarse(TString::Format("V_%d_%d", i, i).Data());
 		}
 
-		hHist -> SetDirectory(0);
-		vHist -> SetDirectory(0);
+//		hHist -> SetDirectory(0);
+//		vHist -> SetDirectory(0);
 
 //		TH2D * hHist = (TH2D *) antSphericalCosineProductsFile.Get(TString::Format("H_%d_%d", i, i));
 ////		hHist -> SetDirectory(0);
@@ -297,14 +405,14 @@ vector<TH2D> getTotalPowerMaps(FilteredAnitaEvent * filtEvent, bool isFine) {
 ////		vHist -> SetDirectory(0);
 
 		totalPowerMaps[i] = TH2D(TString::Format("Ant_%d", i), TString::Format("Ant_%d", i), NPhi, minPhi, maxPhi, NNegTheta, minNegTheta, maxNegTheta);
-		totalPowerMaps[i].Add(hHist, vHist, totalPowers[0][i], totalPowers[1][i]);
+		totalPowerMaps[i].Add(hHist, vHist, totalPowers[i].first, totalPowers[i].first);
 
 		totalPowerMaps[i].GetXaxis() -> SetTitle("#phi");
 		totalPowerMaps[i].GetYaxis() -> SetTitle("-#theta");
 
 //		gROOT -> cd();
-		delete hHist;
-		delete vHist;
+//		delete hHist;
+//		delete vHist;
 	}
 
 //	//  Close the file.
@@ -318,11 +426,11 @@ vector<TH2D> getTotalPowerMaps(FilteredAnitaEvent * filtEvent, bool isFine) {
 /*
  * Each antenna cross-correlation has an upper bound given by the Cauchy-Schwarz inequality. The upper bound here is over both horizontal and vertical polarization.
  */
-void fillCoverageMapsPair(TH2D * coverageMap, vector<TH2D> totalPowerMaps, int ant1, int ant2) {
+void fillPairCoverageMap(TH2D * coverageMap, vector<TH2D> totalPowerMaps, pair<int, int> antPair) {
 
 	//  Access coverage maps to use.
-	TH2D totalPowerMap1 = totalPowerMaps[ant1];
-	TH2D totalPowerMap2 = totalPowerMaps[ant2];
+	TH2D totalPowerMap1 = totalPowerMaps[antPair.first];
+	TH2D totalPowerMap2 = totalPowerMaps[antPair.second];
 
 	//  Get index differences between coverageMap and totalPowerMaps. Relevant for zoomed maps.
 	int dPhiIdx = int((coverageMap -> GetXaxis() -> GetBinCenter(1) - totalPowerMap1.GetXaxis() -> GetBinCenter(1)) / dPhiZoom);
@@ -344,7 +452,7 @@ void fillCoverageMapsPair(TH2D * coverageMap, vector<TH2D> totalPowerMaps, int a
 			double coverageBinContent = coverageMap -> GetBinContent(coverageBinIdx);
 			coverageMap -> SetBinContent(coverageBinIdx, coverageBinContent);
 
-			if (ant1 != ant2) coverageMap -> AddBinContent(coverageBinIdx, rho);
+			if (antPair.first != antPair.second) coverageMap -> AddBinContent(coverageBinIdx, rho);
 			else coverageMap -> AddBinContent(coverageBinIdx, rho / 2);
 		}
 	}
@@ -354,10 +462,10 @@ void fillCoverageMapsPair(TH2D * coverageMap, vector<TH2D> totalPowerMaps, int a
 /*
  * Function which iteratively calls "fillCoverageMapsPair()" for all relevant antenna pairs, up to two phi sectors apart.
  */
-void fillCoverageMapsAll(TH2D * coverageMap, vector<TH2D> totalPowerMaps, vector<int> neighboringAntennas) {
+void fillAllCoverageMaps(TH2D * coverageMap, vector<TH2D> totalPowerMaps, vector<int> neighboringAntennas) {
 
 	//  Establish antenna pairs to be use.
-	vector<vector<int>> antennaPairs = getAntennaPairs(neighboringAntennas);
+	vector<pair<int, int>> antennaPairs = getAntennaPairs(neighboringAntennas);
 
 	//  Create vector array in which to place each antenna pair response.
 	vector<TH2D> mapPair(antennaPairs.size());
@@ -367,7 +475,7 @@ void fillCoverageMapsAll(TH2D * coverageMap, vector<TH2D> totalPowerMaps, vector
 
 	//  Fill the antenna pair coverage histograms. This loop should be embarrassingly parallel.
 	#pragma omp parallel for
-	for (int i = 0; i < antennaPairs.size(); ++i) fillCoverageMapsPair(& mapPair[i], totalPowerMaps, antennaPairs[i][0], antennaPairs[i][1]);
+	for (int i = 0; i < antennaPairs.size(); ++i) fillPairCoverageMap(& mapPair[i], totalPowerMaps, antennaPairs[i]);
 
 	//  Add the histograms together.
 	for (int i = 0; i < antennaPairs.size(); ++i) coverageMap -> Add(& mapPair[i]);
@@ -378,7 +486,7 @@ void fillCoverageMapsAll(TH2D * coverageMap, vector<TH2D> totalPowerMaps, vector
 
 
 /*
- * For a given event, calls to "fillMapsAll()" to construct corresponding unnormalized interferoemtric maps.
+ * For a given event, calls to "fillAllMaps()" to construct corresponding unnormalized interferoemtric maps.
  */
 vector<TH2D> makeUnnormalizedEventInterferometricMaps(int eventNum, bool useBroadband, TString filterString, int anitaVer, int iceMCRun) {
 
@@ -409,8 +517,8 @@ vector<TH2D> makeUnnormalizedEventInterferometricMaps(int eventNum, bool useBroa
 	TH2D responseMapUnpol("responseMapUnpol", "Unpolarized response", NPhiCoarse, minPhiCoarse, maxPhiCoarse, NNegThetaCoarse, minNegThetaCoarse, maxNegThetaCoarse);
 
 	//  Running functions with produced histograms.
-	fillMapsAll(& filtEvent, & responseMapHPol, AnitaPol::kHorizontal);
-	fillMapsAll(& filtEvent, & responseMapVPol, AnitaPol::kVertical);
+	fillAllMaps(& filtEvent, & responseMapHPol, AnitaPol::kHorizontal);
+	fillAllMaps(& filtEvent, & responseMapVPol, AnitaPol::kVertical);
 
 	responseMapUnpol.Add(& responseMapHPol);
 	responseMapUnpol.Add(& responseMapVPol);
@@ -429,7 +537,7 @@ vector<TH2D> makeUnnormalizedEventInterferometricMaps(int eventNum, bool useBroa
 
 
 /*
- * For a given event, calls to "fillMapsAll()" and "fillCoverageMapsAll()" to construct corresponding interferometric maps.
+ * For a given event, calls to "fillAllMaps()" and "fillCoverageMapsAll()" to construct corresponding interferometric maps.
  */
 vector<TH2D> makeEventInterferometricMaps(int eventNum, bool useBroadband, TString filterString, int anitaVer, int iceMCRun) {
 
@@ -465,12 +573,12 @@ vector<TH2D> makeEventInterferometricMaps(int eventNum, bool useBroadband, TStri
 	TH2D normalizedResponseMapUnpol("normalizedResponseMapUnpol", "Normalized Unpolarized response", NPhiCoarse, minPhiCoarse, maxPhiCoarse, NNegThetaCoarse, minNegThetaCoarse, maxNegThetaCoarse);
 
 	//  Running functions with produced histograms.
-	fillMapsAll(& filtEvent, & responseMapHPol, AnitaPol::kHorizontal);
-	fillMapsAll(& filtEvent, & responseMapVPol, AnitaPol::kVertical);
+	fillAllMaps(& filtEvent, & responseMapHPol, AnitaPol::kHorizontal);
+	fillAllMaps(& filtEvent, & responseMapVPol, AnitaPol::kVertical);
 
 	vector<TH2D> totalPowerMaps = getTotalPowerMaps(& filtEvent);
 
-	fillCoverageMapsAll(& coverageMap, totalPowerMaps);
+	fillAllCoverageMaps(& coverageMap, totalPowerMaps);
 
 	normalizedResponseMapHPol.Add(& responseMapHPol);
 	normalizedResponseMapHPol.Divide(& coverageMap);
@@ -603,12 +711,12 @@ TH2D makePeakUnnormalizedInterferometricMap(TH2D * responseMap, int eventNum, bo
 	TH2D peakResponseMap("peakResponseMap", "Response around interferometric peak", NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
 
 	//  Use preceding functions about peak interferometric map.
-	if (responseMapName.Contains("HPol", TString::kIgnoreCase)) fillMapsAll(& filtEvent, & peakResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
-	else if (responseMapName.Contains("VPol", TString::kIgnoreCase)) fillMapsAll(& filtEvent, & peakResponseMap, AnitaPol::kVertical, neighboringAntennas);
+	if (responseMapName.Contains("HPol", TString::kIgnoreCase)) fillAllMaps(& filtEvent, & peakResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
+	else if (responseMapName.Contains("VPol", TString::kIgnoreCase)) fillAllMaps(& filtEvent, & peakResponseMap, AnitaPol::kVertical, neighboringAntennas);
 	else if (responseMapName.Contains("Unpol", TString::kIgnoreCase)) {
 
-		fillMapsAll(& filtEvent, & peakResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
-		fillMapsAll(& filtEvent, & peakResponseMap, AnitaPol::kVertical, neighboringAntennas);
+		fillAllMaps(& filtEvent, & peakResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
+		fillAllMaps(& filtEvent, & peakResponseMap, AnitaPol::kVertical, neighboringAntennas);
 		peakResponseMap.Scale(0.5);
 	}
 
@@ -662,11 +770,11 @@ TH2D makePeakUnnormalizedInterferometricMap(int eventNum, double peakPhi, double
 	TH2D peakResponseMap("peakResponseMap", "Response around interferometric peak", NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
 
 	//  Use preceding functions about peak interferometric map.
-	if (pol != AnitaPol::kNotAPol) fillMapsAll(& filtEvent, & peakResponseMap, pol, neighboringAntennas);
+	if (pol != AnitaPol::kNotAPol) fillAllMaps(& filtEvent, & peakResponseMap, pol, neighboringAntennas);
 	else {
 
-		fillMapsAll(& filtEvent, & peakResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
-		fillMapsAll(& filtEvent, & peakResponseMap, AnitaPol::kVertical, neighboringAntennas);
+		fillAllMaps(& filtEvent, & peakResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
+		fillAllMaps(& filtEvent, & peakResponseMap, AnitaPol::kVertical, neighboringAntennas);
 		peakResponseMap.Scale(0.5);
 	}
 
@@ -725,17 +833,17 @@ TH2D makePeakInterferometricMap(TH2D * responseMap, int eventNum, bool useBroadb
 	TH2D peakNormalizedResponseMap("peakNormalizedResponseMap", TString::Format("%s normalized response around interferometric peak", polType), NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
 
 	//  Use preceding functions about peak interferometric map.
-	if (responseMapName.Contains("HPol", TString::kIgnoreCase)) fillMapsAll(& filtEvent, & peakResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
-	else if (responseMapName.Contains("VPol", TString::kIgnoreCase)) fillMapsAll(& filtEvent, & peakResponseMap, AnitaPol::kVertical, neighboringAntennas);
+	if (responseMapName.Contains("HPol", TString::kIgnoreCase)) fillAllMaps(& filtEvent, & peakResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
+	else if (responseMapName.Contains("VPol", TString::kIgnoreCase)) fillAllMaps(& filtEvent, & peakResponseMap, AnitaPol::kVertical, neighboringAntennas);
 	else if (responseMapName.Contains("Unpol", TString::kIgnoreCase)) {
 
-		fillMapsAll(& filtEvent, & peakResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
-		fillMapsAll(& filtEvent, & peakResponseMap, AnitaPol::kVertical, neighboringAntennas);
+		fillAllMaps(& filtEvent, & peakResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
+		fillAllMaps(& filtEvent, & peakResponseMap, AnitaPol::kVertical, neighboringAntennas);
 	}
 
 	vector<TH2D> totalPowerMaps = getTotalPowerMaps(& filtEvent, true);
 
-	fillCoverageMapsAll(& peakCoverageMap, totalPowerMaps, neighboringAntennas);
+	fillAllCoverageMaps(& peakCoverageMap, totalPowerMaps, neighboringAntennas);
 
 	peakNormalizedResponseMap.Add(& peakResponseMap);
 	peakNormalizedResponseMap.Divide(& peakCoverageMap);
@@ -796,16 +904,16 @@ TH2D makePeakInterferometricMap(int eventNum, double peakPhi, double peakNegThet
 	TH2D peakNormalizedResponseMap("peakNormalizedResponseMap", TString::Format("%s normalized response around interferometric peak", polType), NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
 
 	//  Use preceding functions about peak interferometric map.
-	if (pol != AnitaPol::kNotAPol) fillMapsAll(& filtEvent, & peakResponseMap, pol, neighboringAntennas);
+	if (pol != AnitaPol::kNotAPol) fillAllMaps(& filtEvent, & peakResponseMap, pol, neighboringAntennas);
 	else {
 
-		fillMapsAll(& filtEvent, & peakResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
-		fillMapsAll(& filtEvent, & peakResponseMap, AnitaPol::kVertical, neighboringAntennas);
+		fillAllMaps(& filtEvent, & peakResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
+		fillAllMaps(& filtEvent, & peakResponseMap, AnitaPol::kVertical, neighboringAntennas);
 	}
 
 	vector<TH2D> totalPowerMaps = getTotalPowerMaps(& filtEvent, true);
 
-	fillCoverageMapsAll(& peakCoverageMap, totalPowerMaps, neighboringAntennas);
+	fillAllCoverageMaps(& peakCoverageMap, totalPowerMaps, neighboringAntennas);
 
 	peakNormalizedResponseMap.Add(& peakResponseMap);
 	peakNormalizedResponseMap.Divide(& peakCoverageMap);
@@ -823,7 +931,7 @@ TH2D makePeakInterferometricMap(int eventNum, double peakPhi, double peakNegThet
  * For purposes of testing noncoplanar baselines, create cross-correlation
  * interferometric maps without curvature correction.
  */
-void fillFlatMapsPair(FilteredAnitaEvent * filtEvent, TH2D * responseMap, int ant1, int ant2, AnitaPol::AnitaPol_t pol) {
+void fillPairFlatMap(FilteredAnitaEvent * filtEvent, TH2D * responseMap, pair<int, int> antPair, AnitaPol::AnitaPol_t pol) {
 
 	//  Check dimensions of responseMap, to determine which spherical cosine pair file to reference.
 	int NPhi = responseMap -> GetNbinsX();
@@ -833,29 +941,29 @@ void fillFlatMapsPair(FilteredAnitaEvent * filtEvent, TH2D * responseMap, int an
 	const char * polChar = (pol == AnitaPol::kHorizontal) ? "H" : "V";
 
 	//  Determine which pair of spherical cosines histogram to reference.
-	TH2D * deltaTMap = 0;
+	TH2F * deltaTMap = 0;
 	if (NPhi == NPhiCoarse && NNegTheta == NNegThetaCoarse) {
 
-		deltaTMap = (TH2D *) deltaTMapCoarseFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
+		deltaTMap = getDeltaTCoarse(TString::Format("%s_%d_%d", polChar, antPair.first, antPair.second).Data());
 
 		if (!deltaTMap) {  //  Check if NULL pointer.
 
-			deltaTMap = (TH2D *) deltaTMapCoarseFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
+			deltaTMap = getDeltaTCoarse(TString::Format("%s_%d_%d", polChar, antPair.second, antPair.first).Data());
 			deltaTMap -> Scale(-1);  //  Ordering is antisymmetric here.
 		}
 
 	} else {
 
-		deltaTMap = (TH2D *) deltaTMapFineFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
+		deltaTMap = getDeltaTFine(TString::Format("%s_%d_%d", polChar, antPair.first, antPair.second).Data());
 
 		if (!deltaTMap) {
 
-			deltaTMap = (TH2D *) deltaTMapFineFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
+			deltaTMap = getDeltaTFine(TString::Format("%s_%d_%d", polChar, antPair.second, antPair.first).Data());
 			deltaTMap -> Scale(-1);
 		}
 	}
 
-	deltaTMap -> SetDirectory(0);
+//	deltaTMap -> SetDirectory(0);
 
 //	TFile deltaTMapFile = (NPhi == NPhiCoarse && NNegTheta == NNegThetaCoarse) ? deltaTMapCoarseFile : deltaTMapFineFile;
 //	TH2D * deltaTMap = (TH2D *) deltaTMapFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
@@ -866,13 +974,13 @@ void fillFlatMapsPair(FilteredAnitaEvent * filtEvent, TH2D * responseMap, int an
 //	}
 //	deltaTMap -> SetDirectory(0);
 
-	//  Get index differences between reseponseMap and antSphCosProduct. Relevant for zoomed maps.
+	//  Get index differences between reseponseMap and sphCosProduct. Relevant for zoomed maps.
 	int dPhiIdx = int((responseMap -> GetXaxis() -> GetBinCenter(1) - deltaTMap -> GetXaxis() -> GetBinCenter(1)) / dPhiZoom);
 	int dNegThetaIdx = int((responseMap -> GetYaxis() -> GetBinCenter(1) - deltaTMap -> GetYaxis() -> GetBinCenter(1)) / dNegThetaZoom);
 
 	//  Setting up waveforms and correlations to be used in interferometric map.
-	TGraph waveformAnt1 = TGraph(* filtEvent -> getFilteredGraph(ant1, pol) -> even());
-	TGraph waveformAnt2 = TGraph(* filtEvent -> getFilteredGraph(ant2, pol) -> even());
+	TGraph waveformAnt1 = TGraph(* filtEvent -> getFilteredGraph(antPair.first, pol) -> even());
+	TGraph waveformAnt2 = TGraph(* filtEvent -> getFilteredGraph(antPair.second, pol) -> even());
 
 	TGraph crossCorr = getCorrGraph(& waveformAnt1, & waveformAnt2);
 	crossCorr.SetBit(TGraph::kIsSortedX);  //  This should significantly expedite interpolation.
@@ -894,14 +1002,14 @@ void fillFlatMapsPair(FilteredAnitaEvent * filtEvent, TH2D * responseMap, int an
 			double responseBinContent = responseMap -> GetBinContent(responseBinIdx);
 			responseMap -> SetBinContent(responseBinIdx, responseBinContent);
 
-			if (ant1 != ant2) responseMap -> AddBinContent(responseBinIdx, response);
+			if (antPair.first != antPair.second) responseMap -> AddBinContent(responseBinIdx, response);
 			else responseMap -> AddBinContent(responseBinIdx, response / 2);
 		}
 	}
 
 	//  Delete file object, then close file.
 //	gROOT -> cd();
-	delete deltaTMap;
+//	delete deltaTMap;
 //
 //	gROOT -> cd();
 //	deltaTMapFile.Close();
@@ -911,10 +1019,10 @@ void fillFlatMapsPair(FilteredAnitaEvent * filtEvent, TH2D * responseMap, int an
 /*
  * Function which iteratively calls "fillMapsFlatPair()" for all relevant antenna pairs, up to two phi sectors apart.
  */
-void fillFlatMapsAll(FilteredAnitaEvent * filtEvent, TH2D * responseMap, AnitaPol::AnitaPol_t pol, vector<int> neighboringAntennas) {
+void fillAllFlatMaps(FilteredAnitaEvent * filtEvent, TH2D * responseMap, AnitaPol::AnitaPol_t pol, vector<int> neighboringAntennas) {
 
 	//  Establish antenna pairs to be use.
-	vector<vector<int>> antennaPairs = getAntennaPairs(neighboringAntennas);
+	vector<pair<int, int>> antennaPairs = getAntennaPairs(neighboringAntennas);
 
 	//  Create vector array in which to place each antenna pair response.
 	vector<TH2D> mapPair(antennaPairs.size());
@@ -924,7 +1032,7 @@ void fillFlatMapsAll(FilteredAnitaEvent * filtEvent, TH2D * responseMap, AnitaPo
 
 	//  Fill the antenna pair histograms. This loop should be embarrassingly parallel.
 	#pragma omp parallel for
-	for (int i = 0; i < antennaPairs.size(); ++i) fillFlatMapsPair(filtEvent, & mapPair[i], antennaPairs[i][0], antennaPairs[i][1], pol);
+	for (int i = 0; i < antennaPairs.size(); ++i) fillPairFlatMap(filtEvent, & mapPair[i], antennaPairs[i], pol);
 
 	//  Add the histograms together.
 	for (int i = 0; i < antennaPairs.size(); ++i) responseMap -> Add(& mapPair[i]);
@@ -938,11 +1046,11 @@ void fillFlatMapsAll(FilteredAnitaEvent * filtEvent, TH2D * responseMap, AnitaPo
  * Same principal as fillCoverageMapsPair(), but no curvature included.
  * But rather than an input of vector<TH2D> totalPowerMaps, use vector<vector<double>> totalPowers.
  */
-void fillFlatCoverageMapsPair(TH2D * coverageMap, vector<vector<double>> totalPowers, int ant1, int ant2) {
+void fillPairFlatCoverageMap(TH2D * coverageMap, vector<pair<double, double>> totalPowers, pair<int, int> antPair) {
 
 	//  Access coverage maps to use.
-	double totalPower1 = totalPowers[0][ant1] + totalPowers[1][ant1];
-	double totalPower2 = totalPowers[0][ant2] + totalPowers[1][ant2];
+	double totalPower1 = totalPowers[antPair.first].first + totalPowers[antPair.first].second;
+	double totalPower2 = totalPowers[antPair.second].first + totalPowers[antPair.second].second;
 
 	// Value to fill map with.
 	double rho = sqrt(totalPower1 * totalPower2);
@@ -955,7 +1063,7 @@ void fillFlatCoverageMapsPair(TH2D * coverageMap, vector<vector<double>> totalPo
 			double coverageBinContent = coverageMap -> GetBinContent(coverageBinIdx);
 			coverageMap -> SetBinContent(coverageBinIdx, coverageBinContent);
 
-			if (ant1 != ant2) coverageMap -> AddBinContent(coverageBinIdx, rho);
+			if (antPair.first != antPair.second) coverageMap -> AddBinContent(coverageBinIdx, rho);
 			else coverageMap -> AddBinContent(coverageBinIdx, rho / 2);
 		}
 	}
@@ -966,10 +1074,10 @@ void fillFlatCoverageMapsPair(TH2D * coverageMap, vector<vector<double>> totalPo
  * Function which iteratively calls "fillFlatCoverageMapsPair()" for all relevant antenna pairs, up to two phi sectors apart.
  * Rather than an input of vector<TH2D> totalPowerMaps, use vector<vector<double>> totalPowers.
  */
-void fillFlatCoverageMapsAll(TH2D * coverageMap, vector<vector<double>> totalPowers, vector<int> neighboringAntennas) {
+void fillAllFlatCoverageMaps(TH2D * coverageMap, vector<pair<double, double>> totalPowers, vector<int> neighboringAntennas) {
 
 	//  Establish antenna pairs to be use.
-	vector<vector<int>> antennaPairs = getAntennaPairs(neighboringAntennas);
+	vector<pair<int, int>> antennaPairs = getAntennaPairs(neighboringAntennas);
 
 	//  Create vector array in which to place each antenna pair coverage.
 	vector<TH2D> mapPair(antennaPairs.size());
@@ -979,7 +1087,7 @@ void fillFlatCoverageMapsAll(TH2D * coverageMap, vector<vector<double>> totalPow
 
 	//  Fill the antenna pair coverage histograms. This loop should be embarrassingly parallel.
 	#pragma omp parallel for
-	for (int i = 0; i < antennaPairs.size(); ++i) fillFlatCoverageMapsPair(& mapPair[i], totalPowers, antennaPairs[i][0], antennaPairs[i][1]);
+	for (int i = 0; i < antennaPairs.size(); ++i) fillPairFlatCoverageMap(& mapPair[i], totalPowers, antennaPairs[i]);
 
 	//  Add the histograms together.
 	for (int i = 0; i < antennaPairs.size(); ++i) coverageMap -> Add(& mapPair[i]);
@@ -1038,12 +1146,12 @@ TH2D makePeakUnnormalizedFlatInterferometricMap(TH2D * responseMap, int eventNum
 	TH2D peakFlatResponseMap("peakFlatResponseMap", "Flat response around interferometric peak", NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
 
 	//  Use preceding functions about peak interferometric map.
-	if (responseMapName.Contains("HPol", TString::kIgnoreCase)) fillFlatMapsAll(& filtEvent, & peakFlatResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
-	else if (responseMapName.Contains("VPol", TString::kIgnoreCase)) fillFlatMapsAll(& filtEvent, & peakFlatResponseMap, AnitaPol::kVertical, neighboringAntennas);
+	if (responseMapName.Contains("HPol", TString::kIgnoreCase)) fillAllFlatMaps(& filtEvent, & peakFlatResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
+	else if (responseMapName.Contains("VPol", TString::kIgnoreCase)) fillAllFlatMaps(& filtEvent, & peakFlatResponseMap, AnitaPol::kVertical, neighboringAntennas);
 	else if (responseMapName.Contains("Unpol", TString::kIgnoreCase)) {
 
-		fillFlatMapsAll(& filtEvent, & peakFlatResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
-		fillFlatMapsAll(& filtEvent, & peakFlatResponseMap, AnitaPol::kVertical, neighboringAntennas);
+		fillAllFlatMaps(& filtEvent, & peakFlatResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
+		fillAllFlatMaps(& filtEvent, & peakFlatResponseMap, AnitaPol::kVertical, neighboringAntennas);
 		peakFlatResponseMap.Scale(0.5);
 	}
 
@@ -1096,11 +1204,11 @@ TH2D makePeakUnnormalizedFlatInterferometricMap(int eventNum, double peakPhi, do
 	TH2D peakFlatResponseMap("peakFlatResponseMap", "Flat response around interferometric peak", NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
 
 	//  Use preceding functions about peak interferometric map.
-	if (pol != AnitaPol::kNotAPol) fillFlatMapsAll(& filtEvent, & peakFlatResponseMap, pol, neighboringAntennas);
+	if (pol != AnitaPol::kNotAPol) fillAllFlatMaps(& filtEvent, & peakFlatResponseMap, pol, neighboringAntennas);
 	else {
 
-		fillFlatMapsAll(& filtEvent, & peakFlatResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
-		fillFlatMapsAll(& filtEvent, & peakFlatResponseMap, AnitaPol::kVertical, neighboringAntennas);
+		fillAllFlatMaps(& filtEvent, & peakFlatResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
+		fillAllFlatMaps(& filtEvent, & peakFlatResponseMap, AnitaPol::kVertical, neighboringAntennas);
 		peakFlatResponseMap.Scale(0.5);
 	}
 
@@ -1160,17 +1268,17 @@ TH2D makePeakFlatInterferometricMap(TH2D * responseMap, int eventNum, TString fi
 	TH2D peakFlatNormalizedResponseMap("peakFlatNormalizedResponseMap", TString::Format("%s flat normalized response around interferometric peak", polType), NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
 
 	//  Use preceding functions about peak interferometric map.
-	if (responseMapName.Contains("HPol", TString::kIgnoreCase)) fillFlatMapsAll(& filtEvent, & peakFlatResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
-	else if (responseMapName.Contains("VPol", TString::kIgnoreCase)) fillFlatMapsAll(& filtEvent, & peakFlatResponseMap, AnitaPol::kVertical, neighboringAntennas);
+	if (responseMapName.Contains("HPol", TString::kIgnoreCase)) fillAllFlatMaps(& filtEvent, & peakFlatResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
+	else if (responseMapName.Contains("VPol", TString::kIgnoreCase)) fillAllFlatMaps(& filtEvent, & peakFlatResponseMap, AnitaPol::kVertical, neighboringAntennas);
 	else if (responseMapName.Contains("Unpol", TString::kIgnoreCase)) {
 
-		fillFlatMapsAll(& filtEvent, & peakFlatResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
-		fillFlatMapsAll(& filtEvent, & peakFlatResponseMap, AnitaPol::kVertical, neighboringAntennas);
+		fillAllFlatMaps(& filtEvent, & peakFlatResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
+		fillAllFlatMaps(& filtEvent, & peakFlatResponseMap, AnitaPol::kVertical, neighboringAntennas);
 	}
 
-	vector<vector<double>> totalPowers = getEventTotalPowers(& filtEvent);
+	vector<pair<double, double>> totalPowers = getEventTotalPowers(& filtEvent);
 
-	fillFlatCoverageMapsAll(& peakFlatCoverageMap, totalPowers, neighboringAntennas);
+	fillAllFlatCoverageMaps(& peakFlatCoverageMap, totalPowers, neighboringAntennas);
 
 	peakFlatNormalizedResponseMap.Add(& peakFlatResponseMap);
 	peakFlatNormalizedResponseMap.Divide(& peakFlatCoverageMap);
@@ -1230,16 +1338,16 @@ TH2D makePeakFlatInterferometricMap(int eventNum, double peakPhi, double peakNeg
 	TH2D peakFlatNormalizedResponseMap("peakFlatNormalizedResponseMap", TString::Format("%s flat normalized response around interferometric peak", polType), NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
 
 	//  Use preceding functions about peak interferometric map.
-	if (pol != AnitaPol::kNotAPol) fillFlatMapsAll(& filtEvent, & peakFlatResponseMap, pol, neighboringAntennas);
+	if (pol != AnitaPol::kNotAPol) fillAllFlatMaps(& filtEvent, & peakFlatResponseMap, pol, neighboringAntennas);
 	else {
 
-		fillFlatMapsAll(& filtEvent, & peakFlatResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
-		fillFlatMapsAll(& filtEvent, & peakFlatResponseMap, AnitaPol::kVertical, neighboringAntennas);
+		fillAllFlatMaps(& filtEvent, & peakFlatResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
+		fillAllFlatMaps(& filtEvent, & peakFlatResponseMap, AnitaPol::kVertical, neighboringAntennas);
 	}
 
-	vector<vector<double>> totalPowers = getEventTotalPowers(& filtEvent);
+	vector<pair<double, double>> totalPowers = getEventTotalPowers(& filtEvent);
 
-	fillFlatCoverageMapsAll(& peakFlatCoverageMap, totalPowers, neighboringAntennas);
+	fillAllFlatCoverageMaps(& peakFlatCoverageMap, totalPowers, neighboringAntennas);
 
 	peakFlatNormalizedResponseMap.Add(& peakFlatResponseMap);
 	peakFlatNormalizedResponseMap.Divide(& peakFlatCoverageMap);

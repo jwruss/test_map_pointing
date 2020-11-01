@@ -112,7 +112,7 @@ message("PROJECT_BINARY_DIR is set to ${PROJECT_BINARY_DIR}")
 
 set(ANITA_LIBS AnitaEvent AnitaAnalysis AnitaAnalysisTools AnitaCorrelator RootFftwWrapper UCorrelator)
 
-set(BINARIES makeDeltaTMapFiles makeAntSphericalCosineProductsFiles testMapPointing)
+set(BINARIES makeDeltaTFiles makeSphCosProductFiles testMapPointing)
 
 #add_library(testMapPointingLib SHARED ${SOURCE_FILES})
 #target_link_libraries(testMapPointingLib ${SOURCE_FILES} ${ZLIB_LIBRARIES} ${ROOT_LIBRARIES} ${FFTW_LIBRARIES} ${ANITA_LIBS})
