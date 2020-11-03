@@ -247,19 +247,19 @@ void fillPairMap(FilteredAnitaEvent * filtEvent, TH2D * responseMap, pair<int, i
 
 //	sphCosProduct -> SetDirectory(0);
 
-//	//  Accessing relevant TH2D objects.
-//	TFile deltaTMapFile = (NPhi == NPhiCoarse && NNegTheta == NNegThetaCoarse) ? deltaTMapCoarseFile : deltaTMapFineFile;
-//	TH2D * deltaTMap = (TH2D *) deltaTMapFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
+//	//  Accessing relevant TH2F objects.
+//	TFile deltaTFile((NPhi == NPhiCoarse && NNegTheta == NNegThetaCoarse) ? "deltaTCoarse.root" : "deltaTFine.root");
+//	TH2F * deltaTMap = (TH2F *) deltaTFile.Get(TString::Format("%s_%d_%d", polChar, antPair.first, antPair.second));
 //	if (!deltaTMap) {
 //
-//		deltaTMap = (TH2D *) deltaTMapFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
+//		deltaTMap = (TH2F *) deltaTFile.Get(TString::Format("%s_%d_%d", polChar, antPair.second, antPair.first));
 //		deltaTMap -> Scale(-1);  //  Ordering is antisymmetric, here.
 //	}
 ////	deltaTMap -> SetDirectory(0);
 //
-//	TFile antSphericalCosineProductsFile= (NPhi == NPhiCoarse && NNegTheta == NNegThetaCoarse) ? antSphericalCosineProductsCoarseFile : antSphericalCosineProductsFineFile;
-//	TH2D * sphCosProduct = (TH2D *) antSphericalCosineProductsFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
-//	if (!sphCosProduct) sphCosProduct = (TH2D *) antSphericalCosineProductsFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
+//	TFile sphCosProductFile((NPhi == NPhiCoarse && NNegTheta == NNegThetaCoarse) ? "sphCosProductCoarse.root" : "sphCosProductFine.root");
+//	TH2F * sphCosProduct = (TH2F *) sphCosProductFile.Get(TString::Format("%s_%d_%d", polChar, antPair.first, antPair.second));
+//	if (!sphCosProduct) sphCosProduct = (TH2F *) sphCosProductFile.Get(TString::Format("%s_%d_%d", polChar, antPair.second, antPair.first));
 ////	sphCosProduct -> SetDirectory(0);
 
 	//  Get index differences between reseponseMap and sphCosProduct. Relevant for zoomed maps.
@@ -381,7 +381,7 @@ vector<TH2D> getTotalPowerMaps(FilteredAnitaEvent * filtEvent, bool isFine) {
 	gStyle -> SetOptStat(0);  //  To remove the legend reporting number of bins.
 
 //	//  Accessing file from which to read histograms.
-//	TFile antSphericalCosineProductsFile = isFine ? antSphericalCosineProductsFineFile : antSphericalCosineProductsCoarseFile;
+//	TFile sphCosProductFile(isFine ? "sphCosProductFine.root" : "sphCosProductCoarse.root");
 
 	#pragma omp parallel for
 	for (int i = 0; i < NUM_SEAVEYS; ++i) {
@@ -402,10 +402,10 @@ vector<TH2D> getTotalPowerMaps(FilteredAnitaEvent * filtEvent, bool isFine) {
 //		hHist -> SetDirectory(0);
 //		vHist -> SetDirectory(0);
 
-//		TH2D * hHist = (TH2D *) antSphericalCosineProductsFile.Get(TString::Format("H_%d_%d", i, i));
+//		TH2D * hHist = (TH2D *) sphCosProductFile.Get(TString::Format("H_%d_%d", i, i));
 ////		hHist -> SetDirectory(0);
 //
-//		TH2D * vHist = (TH2D *) antSphericalCosineProductsFile.Get(TString::Format("V_%d_%d", i, i));
+//		TH2D * vHist = (TH2D *) sphCosProductFile.Get(TString::Format("V_%d_%d", i, i));
 ////		vHist -> SetDirectory(0);
 
 		totalPowerMaps[i] = TH2D(TString::Format("Ant_%d", i), TString::Format("Ant_%d", i), NPhi, minPhi, maxPhi, NNegTheta, minNegTheta, maxNegTheta);
@@ -969,14 +969,14 @@ void fillPairFlatMap(FilteredAnitaEvent * filtEvent, TH2D * responseMap, pair<in
 
 //	deltaTMap -> SetDirectory(0);
 
-//	TFile deltaTMapFile = (NPhi == NPhiCoarse && NNegTheta == NNegThetaCoarse) ? deltaTMapCoarseFile : deltaTMapFineFile;
-//	TH2D * deltaTMap = (TH2D *) deltaTMapFile.Get(TString::Format("%s_%d_%d", polChar, ant1, ant2));
+//	TFile deltaTFile((NPhi == NPhiCoarse && NNegTheta == NNegThetaCoarse) ? "deltaTCoarse.root" : "deltaTFine.root");
+//	TH2F * deltaTMap = (TH2F *) deltaTFile.Get(TString::Format("%s_%d_%d", polChar, antPair.first, antPair.second));
 //	if (!deltaTMap) {
 //
-//		deltaTMap = (TH2D *) deltaTMapFile.Get(TString::Format("%s_%d_%d", polChar, ant2, ant1));
+//		deltaTMap = (TH2F *) deltaTFile.Get(TString::Format("%s_%d_%d", polChar, antPair.second, antPair.first));
 //		deltaTMap -> Scale(-1);  //  Ordering is antisymmetric, here.
 //	}
-//	deltaTMap -> SetDirectory(0);
+////	deltaTMap -> SetDirectory(0);
 
 	//  Get index differences between reseponseMap and sphCosProduct. Relevant for zoomed maps.
 	int dPhiIdx = int((responseMap -> GetXaxis() -> GetBinCenter(1) - deltaTMap -> GetXaxis() -> GetBinCenter(1)) / dPhiZoom);
