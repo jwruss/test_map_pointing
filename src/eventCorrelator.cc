@@ -47,7 +47,7 @@ const double dNegThetaZoom = 0.5;
  */
 TH2F * getDeltaTCoarse(const char * mapName) {
 
-	static std::map<const char *, TH2F *> deltaTCoarseMap;
+	static std::map<TString, TH2F *> deltaTCoarseMap;
 
 	if (deltaTCoarseMap.empty()) {
 
@@ -71,7 +71,7 @@ TH2F * getDeltaTCoarse(const char * mapName) {
  */
 TH2F * getDeltaTFine(const char * mapName) {
 
-	static std::map<const char *, TH2F *> deltaTFineMap;
+	static std::map<TString, TH2F *> deltaTFineMap;
 
 	if (deltaTFineMap.empty()) {
 
@@ -95,7 +95,7 @@ TH2F * getDeltaTFine(const char * mapName) {
  */
 TH2F * getSphCosProductCoarse(const char * mapName) {
 
-	static std::map<const char *, TH2F *> sphCosProductCoarseMap;
+	static std::map<TString, TH2F *> sphCosProductCoarseMap;
 
 	if (sphCosProductCoarseMap.empty()) {
 
@@ -119,7 +119,7 @@ TH2F * getSphCosProductCoarse(const char * mapName) {
  */
 TH2F * getSphCosProductFine(const char * mapName) {
 
-	static std::map<const char *, TH2F *> sphCosProductFineMap;
+	static std::map<TString, TH2F *> sphCosProductFineMap;
 
 	if (sphCosProductFineMap.empty()) {
 
