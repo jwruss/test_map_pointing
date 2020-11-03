@@ -58,7 +58,13 @@ TH2F * getDeltaTCoarse(const char * mapName) {
 			TIter keyList(deltaTCoarseFile.GetListOfKeys());    //  Method of looping over objects in ROOT binary from https://root.cern.ch/root/htmldoc/tutorials/io/loopdir.C.html
 			TKey * key;
 
-			while (key = (TKey *) keyList()) deltaTCoarseMap.insert(make_pair(key -> GetName(), (TH2F *) key -> ReadObj()));  //  This method of loading filling in the map from https://thispointer.com/stdmap-tutorial-part-1-usage-detail-with-examples/
+			while ((key = (TKey *) keyList())) {
+
+				TH2F * deltaT = (TH2F *) key -> ReadObj();
+				deltaT -> SetDirectory(0);
+
+				deltaTCoarseMap.insert(make_pair(key -> GetName(), deltaT));  //  This method of loading filling in the map from https://thispointer.com/stdmap-tutorial-part-1-usage-detail-with-examples/
+			}
 		}
 	}
 
@@ -82,7 +88,13 @@ TH2F * getDeltaTFine(const char * mapName) {
 			TIter keyList(deltaTFineFile.GetListOfKeys());
 			TKey * key;
 
-			while (key = (TKey *) keyList()) deltaTFineMap.insert(make_pair(key -> GetName(), (TH2F *) key -> ReadObj()));
+			while ((key = (TKey *) keyList())) {
+
+				TH2F * deltaT = (TH2F *) key -> ReadObj();
+				deltaT -> SetDirectory(0);
+
+				deltaTFineMap.insert(make_pair(key -> GetName(), deltaT));
+			}
 		}
 	}
 
@@ -106,7 +118,13 @@ TH2F * getSphCosProductCoarse(const char * mapName) {
 			TIter keyList(sphCosProductCoarseFile.GetListOfKeys());
 			TKey * key;
 
-			while (key = (TKey *) keyList()) sphCosProductCoarseMap.insert(make_pair(key -> GetName(), (TH2F *) key -> ReadObj()));
+			while ((key = (TKey *) keyList())) {
+
+				TH2F * sphCosProduct = (TH2F *) key -> ReadObj();
+				sphCosProduct -> SetDirectory(0);
+
+				sphCosProductCoarseMap.insert(make_pair(key -> GetName(), sphCosProduct));
+			}
 		}
 	}
 
@@ -130,7 +148,13 @@ TH2F * getSphCosProductFine(const char * mapName) {
 			TIter keyList(sphCosProductFineFile.GetListOfKeys());
 			TKey * key;
 
-			while (key = (TKey *) keyList()) sphCosProductFineMap.insert(make_pair(key -> GetName(), (TH2F *) key -> ReadObj()));
+			while ((key = (TKey *) keyList())) {
+
+				TH2F * sphCosProduct = (TH2F *) key -> ReadObj();
+				sphCosProduct -> SetDirectory(0);
+
+				sphCosProductFineMap.insert(make_pair(key -> GetName(), sphCosProduct));
+			}
 		}
 	}
 
