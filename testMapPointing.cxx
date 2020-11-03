@@ -110,6 +110,7 @@ void addPolTree(int part, bool isVPol = false) {
 //		unnormalizedFlat.peakPol = unnormalizedFlatMapPol.GetMaximum();
 //		vector<double> unnormalizedFlatMapPolAngles = getInterferometricPeakLocation(& unnormalizedFlatMapPol);
 		TH2D * unnormalizedFlatMapPol = new TH2D(makePeakUnnormalizedFlatInterferometricMap(eventNumber, phiRough, -thetaRough, sum -> highestPol()));
+		unnormalizedFlatMapPol -> SetDirectory(0);  //  Will this help with memory?
 		unnormalizedFlat.peakPol = unnormalizedFlatMapPol -> GetMaximum();
 		vector<double> unnormalizedFlatMapPolAngles = getInterferometricPeakLocation(unnormalizedFlatMapPol);
 		unnormalizedFlat.phiPol = unnormalizedFlatMapPolAngles[0];
@@ -120,6 +121,7 @@ void addPolTree(int part, bool isVPol = false) {
 //		unnormalizedFlat.peakUnpol = unnormalizedFlatMapUnpol.GetMaximum();
 //		vector<double> unnormalizedFlatMapUnpolAngles = getInterferometricPeakLocation(& unnormalizedFlatMapUnpol);
 		TH2D * unnormalizedFlatMapUnpol = new TH2D(makePeakUnnormalizedFlatInterferometricMap(eventNumber, phiRough, -thetaRough, AnitaPol::kNotAPol));
+		unnormalizedFlatMapUnpol -> SetDirectory(0);
 		unnormalizedFlat.peakUnpol = unnormalizedFlatMapUnpol -> GetMaximum();
 		vector<double> unnormalizedFlatMapUnpolAngles = getInterferometricPeakLocation(unnormalizedFlatMapUnpol);
 		unnormalizedFlat.phiUnpol = unnormalizedFlatMapUnpolAngles[0];
@@ -131,6 +133,7 @@ void addPolTree(int part, bool isVPol = false) {
 //		unnormalized.peakPol = unnormalizedMapPol.GetMaximum();
 //		vector<double> unnormalizedMapPolAngles = getInterferometricPeakLocation(& unnormalizedMapPol);
 		TH2D * unnormalizedMapPol = new TH2D(makePeakUnnormalizedInterferometricMap(eventNumber, phiRough, -thetaRough, sum -> highestPol()));
+		unnormalizedMapPol -> SetDirectory(0);
 		unnormalized.peakPol = unnormalizedMapPol -> GetMaximum();
 		vector<double> unnormalizedMapPolAngles = getInterferometricPeakLocation(unnormalizedMapPol);
 		unnormalized.phiPol = unnormalizedMapPolAngles[0];
@@ -141,6 +144,7 @@ void addPolTree(int part, bool isVPol = false) {
 //		unnormalized.peakUnpol = unnormalizedMapUnpol.GetMaximum();
 //		vector<double> unnormalizedMapUnpolAngles = getInterferometricPeakLocation(& unnormalizedMapUnpol);
 		TH2D * unnormalizedMapUnpol = new TH2D(makePeakUnnormalizedInterferometricMap(eventNumber, phiRough, -thetaRough, AnitaPol::kNotAPol));
+		unnormalizedMapUnpol -> SetDirectory(0);
 		unnormalized.peakUnpol = unnormalizedMapUnpol -> GetMaximum();
 		vector<double> unnormalizedMapUnpolAngles = getInterferometricPeakLocation(unnormalizedMapUnpol);
 		unnormalized.phiUnpol = unnormalizedMapUnpolAngles[0];
@@ -152,6 +156,7 @@ void addPolTree(int part, bool isVPol = false) {
 //		unnormalizedBroadband.peakPol = unnormalizedBroadbandMapPol.GetMaximum();
 //		vector<double> unnormalizedBroadbandMapPolAngles = getInterferometricPeakLocation(& unnormalizedBroadbandMapPol);
 		TH2D * unnormalizedBroadbandMapPol = new TH2D(makePeakUnnormalizedInterferometricMap(eventNumber, phiRough, -thetaRough, sum -> highestPol(), true));
+		unnormalizedBroadbandMapPol -> SetDirectory(0);
 		unnormalizedBroadband.peakPol = unnormalizedBroadbandMapPol -> GetMaximum();
 		vector<double> unnormalizedBroadbandMapPolAngles = getInterferometricPeakLocation(unnormalizedBroadbandMapPol);
 		unnormalizedBroadband.phiPol = unnormalizedBroadbandMapPolAngles[0];
@@ -162,6 +167,7 @@ void addPolTree(int part, bool isVPol = false) {
 //		unnormalizedBroadband.peakUnpol = unnormalizedBroadbandMapUnpol.GetMaximum();
 //		vector<double> unnormalizedBroadbandMapUnpolAngles = getInterferometricPeakLocation(& unnormalizedBroadbandMapUnpol);
 		TH2D * unnormalizedBroadbandMapUnpol = new TH2D(makePeakUnnormalizedInterferometricMap(eventNumber, phiRough, -thetaRough, AnitaPol::kNotAPol, true));
+		unnormalizedBroadbandMapUnpol -> SetDirectory(0);
 		unnormalizedBroadband.peakUnpol = unnormalizedBroadbandMapUnpol -> GetMaximum();
 		vector<double> unnormalizedBroadbandMapUnpolAngles = getInterferometricPeakLocation(unnormalizedBroadbandMapUnpol);
 		unnormalizedBroadband.phiUnpol = unnormalizedBroadbandMapUnpolAngles[0];
@@ -173,6 +179,7 @@ void addPolTree(int part, bool isVPol = false) {
 //		normalizedFlat.peakPol = normalizedFlatMapPol.GetMaximum();
 //		vector<double> normalizedFlatMapPolAngles = getInterferometricPeakLocation(& normalizedFlatMapPol);
 		TH2D * normalizedFlatMapPol = new TH2D(makePeakFlatInterferometricMap(eventNumber, phiRough, -thetaRough, sum -> highestPol()));
+		normalizedFlatMapPol -> SetDirectory(0);
 		normalizedFlat.peakPol = normalizedFlatMapPol -> GetMaximum();
 		vector<double> normalizedFlatMapPolAngles = getInterferometricPeakLocation(normalizedFlatMapPol);
 		normalizedFlat.phiPol = normalizedFlatMapPolAngles[0];
@@ -183,6 +190,7 @@ void addPolTree(int part, bool isVPol = false) {
 //		normalizedFlat.peakUnpol = normalizedFlatMapUnpol.GetMaximum();
 //		vector<double> normalizedFlatMapUnpolAngles = getInterferometricPeakLocation(& normalizedFlatMapUnpol);
 		TH2D * normalizedFlatMapUnpol = new TH2D(makePeakFlatInterferometricMap(eventNumber, phiRough, -thetaRough, AnitaPol::kNotAPol));
+		normalizedFlatMapUnpol -> SetDirectory(0);
 		normalizedFlat.peakUnpol = normalizedFlatMapUnpol -> GetMaximum();
 		vector<double> normalizedFlatMapUnpolAngles = getInterferometricPeakLocation(normalizedFlatMapUnpol);
 		normalizedFlat.phiUnpol = normalizedFlatMapUnpolAngles[0];
@@ -194,6 +202,7 @@ void addPolTree(int part, bool isVPol = false) {
 //		normalized.peakPol = normalizedMapPol.GetMaximum();
 //		vector<double> normalizedMapPolAngles = getInterferometricPeakLocation(& normalizedMapPol);
 		TH2D * normalizedMapPol = new TH2D(makePeakInterferometricMap(eventNumber, phiRough, -thetaRough, sum -> highestPol()));
+		normalizedMapPol -> SetDirectory(0);
 		normalized.peakPol = normalizedMapPol -> GetMaximum();
 		vector<double> normalizedMapPolAngles = getInterferometricPeakLocation(normalizedMapPol);
 		normalized.phiPol = normalizedMapPolAngles[0];
@@ -204,6 +213,7 @@ void addPolTree(int part, bool isVPol = false) {
 //		normalized.peakUnpol = normalizedMapUnpol.GetMaximum();
 //		vector<double> normalizedMapUnpolAngles = getInterferometricPeakLocation(& normalizedMapUnpol);
 		TH2D * normalizedMapUnpol = new TH2D(makePeakInterferometricMap(eventNumber, phiRough, -thetaRough, AnitaPol::kNotAPol));
+		normalizedMapUnpol -> SetDirectory(0);
 		normalized.peakUnpol = normalizedMapUnpol -> GetMaximum();
 		vector<double> normalizedMapUnpolAngles = getInterferometricPeakLocation(normalizedMapUnpol);
 		normalized.phiUnpol = normalizedMapUnpolAngles[0];
@@ -215,6 +225,7 @@ void addPolTree(int part, bool isVPol = false) {
 //		normalizedBroadband.peakPol = normalizedBroadbandMapPol.GetMaximum();
 //		vector<double> normalizedBroadbandMapPolAngles = getInterferometricPeakLocation(& normalizedBroadbandMapPol);
 		TH2D * normalizedBroadbandMapPol = new TH2D(makePeakInterferometricMap(eventNumber, phiRough, -thetaRough, sum -> highestPol(), true));
+		normalizedBroadbandMapPol -> SetDirectory(0);
 		normalizedBroadband.peakPol = normalizedBroadbandMapPol -> GetMaximum();
 		vector<double> normalizedBroadbandMapPolAngles = getInterferometricPeakLocation(normalizedBroadbandMapPol);
 		normalizedBroadband.phiPol = normalizedBroadbandMapPolAngles[0];
@@ -225,6 +236,7 @@ void addPolTree(int part, bool isVPol = false) {
 //		normalizedBroadband.peakUnpol = normalizedBroadbandMapUnpol.GetMaximum();
 //		vector<double> normalizedBroadbandMapUnpolAngles = getInterferometricPeakLocation(& normalizedBroadbandMapUnpol);
 		TH2D * normalizedBroadbandMapUnpol = new TH2D(makePeakInterferometricMap(eventNumber, phiRough, -thetaRough, AnitaPol::kNotAPol, true));
+		normalizedBroadbandMapUnpol -> SetDirectory(0);
 		normalizedBroadband.peakUnpol = normalizedBroadbandMapUnpol -> GetMaximum();
 		vector<double> normalizedBroadbandMapUnpolAngles = getInterferometricPeakLocation(normalizedBroadbandMapUnpol);
 		normalizedBroadband.phiUnpol = normalizedBroadbandMapUnpolAngles[0];

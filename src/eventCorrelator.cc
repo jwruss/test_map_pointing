@@ -55,15 +55,10 @@ TH2F * getDeltaTCoarse(const char * mapName) {
 		if (deltaTCoarseMap.empty()) {  //  According to Cosmin, the purpose of the double guard is to first check if another thread is filling the map, then to ensure that it has been filled in the current thread.
 
 			TFile deltaTCoarseFile("deltaTCoarse.root");
-			TIter next(deltaTCoarseFile.GetListOfKeys());    //  Method of looping over objects in ROOT binary from https://root.cern.ch/root/htmldoc/tutorials/io/loopdir.C.html
+			TIter keyList(deltaTCoarseFile.GetListOfKeys());    //  Method of looping over objects in ROOT binary from https://root.cern.ch/root/htmldoc/tutorials/io/loopdir.C.html
 			TKey * key;
 
-			while (key = (TKey *) next()) {
-
-				TH2F * deltaT = (TH2F *) key -> ReadObj();
-
-				deltaTCoarseMap.insert(std::make_pair(deltaT -> GetName(), deltaT));  //  This method of loading filling in the map from https://thispointer.com/stdmap-tutorial-part-1-usage-detail-with-examples/
-			}
+			while (key = (TKey *) keyList()) deltaTCoarseMap.insert(make_pair(key -> GetName(), (TH2F *) key -> ReadObj()));  //  This method of loading filling in the map from https://thispointer.com/stdmap-tutorial-part-1-usage-detail-with-examples/
 		}
 	}
 
@@ -84,15 +79,10 @@ TH2F * getDeltaTFine(const char * mapName) {
 		if (deltaTFineMap.empty()) {
 
 			TFile deltaTFineFile("deltaTFine.root");
-			TIter next(deltaTFineFile.GetListOfKeys());
+			TIter keyList(deltaTFineFile.GetListOfKeys());
 			TKey * key;
 
-			while (key = (TKey *) next()) {
-
-				TH2F * deltaT = (TH2F *) key -> ReadObj();
-
-				deltaTFineMap.insert(std::make_pair(deltaT -> GetName(), deltaT));
-			}
+			while (key = (TKey *) keyList()) deltaTFineMap.insert(make_pair(key -> GetName(), (TH2F *) key -> ReadObj()));
 		}
 	}
 
@@ -113,15 +103,10 @@ TH2F * getSphCosProductCoarse(const char * mapName) {
 		if (sphCosProductCoarseMap.empty()) {
 
 			TFile sphCosProductCoarseFile("sphCosProductCoarse.root");
-			TIter next(sphCosProductCoarseFile.GetListOfKeys());
+			TIter keyList(sphCosProductCoarseFile.GetListOfKeys());
 			TKey * key;
 
-			while (key = (TKey *) next()) {
-
-				TH2F * sphCosProduct = (TH2F *) key -> ReadObj();
-
-				sphCosProductCoarseMap.insert(std::make_pair(sphCosProduct -> GetName(), sphCosProduct));
-			}
+			while (key = (TKey *) keyList()) sphCosProductCoarseMap.insert(make_pair(key -> GetName(), (TH2F *) key -> ReadObj()));
 		}
 	}
 
@@ -142,15 +127,10 @@ TH2F * getSphCosProductFine(const char * mapName) {
 		if (sphCosProductFineMap.empty()) {
 
 			TFile sphCosProductFineFile("sphCosProductFine.root");
-			TIter next(sphCosProductFineFile.GetListOfKeys());
+			TIter keyList(sphCosProductFineFile.GetListOfKeys());
 			TKey * key;
 
-			while (key = (TKey *) next()) {
-
-				TH2F * sphCosProduct = (TH2F *) key -> ReadObj();
-
-				sphCosProductFineMap.insert(std::make_pair(sphCosProduct -> GetName(), sphCosProduct));
-			}
+			while (key = (TKey *) keyList()) sphCosProductFineMap.insert(make_pair(key -> GetName(), (TH2F *) key -> ReadObj()));
 		}
 	}
 
