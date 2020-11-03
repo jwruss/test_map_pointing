@@ -402,10 +402,10 @@ vector<TH2D> getTotalPowerMaps(FilteredAnitaEvent * filtEvent, bool isFine) {
 //		hHist -> SetDirectory(0);
 //		vHist -> SetDirectory(0);
 
-//		TH2D * hHist = (TH2D *) sphCosProductFile.Get(TString::Format("H_%d_%d", i, i));
+//		TH2F * hHist = (TH2F *) sphCosProductFile.Get(TString::Format("H_%d_%d", i, i));
 ////		hHist -> SetDirectory(0);
 //
-//		TH2D * vHist = (TH2D *) sphCosProductFile.Get(TString::Format("V_%d_%d", i, i));
+//		TH2D * vHist = (TH2F *) sphCosProductFile.Get(TString::Format("V_%d_%d", i, i));
 ////		vHist -> SetDirectory(0);
 
 		totalPowerMaps[i] = TH2D(TString::Format("Ant_%d", i), TString::Format("Ant_%d", i), NPhi, minPhi, maxPhi, NNegTheta, minNegTheta, maxNegTheta);
