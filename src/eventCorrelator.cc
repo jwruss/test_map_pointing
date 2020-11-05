@@ -712,20 +712,20 @@ TH2D makePeakUnnormalizedInterferometricMap(TH2D * responseMap, int eventNum, bo
 	else if (responseMapName.Contains("Unpol", TString::kIgnoreCase)) polType = "Unpolarized";
 
 	//  Create TH2D objects from which to generate the peak interferometric map.
-	TH2D peakResponseMap("peakResponseMap", "Response around interferometric peak", NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
+	TH2D peakUnnormalizedResponseMap(!useBroadband ? "peakUnnormalizedResponseMap" : "peakUnnormalizedBroadbandResponseMap", !useBroadband ? "Unnormalized response around interferometric peak" : "Unnormalized broadband response around interferometric peak", NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
 
 	//  Use preceding functions about peak interferometric map.
-	if (responseMapName.Contains("HPol", TString::kIgnoreCase)) fillAllMaps(& filtEvent, & peakResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
-	else if (responseMapName.Contains("VPol", TString::kIgnoreCase)) fillAllMaps(& filtEvent, & peakResponseMap, AnitaPol::kVertical, neighboringAntennas);
+	if (responseMapName.Contains("HPol", TString::kIgnoreCase)) fillAllMaps(& filtEvent, & peakUnnormalizedResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
+	else if (responseMapName.Contains("VPol", TString::kIgnoreCase)) fillAllMaps(& filtEvent, & peakUnnormalizedResponseMap, AnitaPol::kVertical, neighboringAntennas);
 	else if (responseMapName.Contains("Unpol", TString::kIgnoreCase)) {
 
-		fillAllMaps(& filtEvent, & peakResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
-		fillAllMaps(& filtEvent, & peakResponseMap, AnitaPol::kVertical, neighboringAntennas);
-		peakResponseMap.Scale(0.5);
+		fillAllMaps(& filtEvent, & peakUnnormalizedResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
+		fillAllMaps(& filtEvent, & peakUnnormalizedResponseMap, AnitaPol::kVertical, neighboringAntennas);
+		peakUnnormalizedResponseMap.Scale(0.5);
 	}
 
 	//  Return pointer to peak interferometric map.
-	return peakResponseMap;
+	return peakUnnormalizedResponseMap;
 }
 
 
@@ -771,19 +771,19 @@ TH2D makePeakUnnormalizedInterferometricMap(int eventNum, double peakPhi, double
 	else if (pol == AnitaPol::kNotAPol) polType = "Unpolarized";
 
 	//  Create TH2D objects from which to generate the peak interferometric map.
-	TH2D peakResponseMap("peakResponseMap", "Response around interferometric peak", NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
+	TH2D peakUnnormalizedResponseMap(!useBroadband ? "peakUnnormalizedResponseMap" : "peakUnnormalizedBroadbandResponseMap", !useBroadband ? "Unnormalized response around interferometric peak" : "Unnormalized broadband response around interferometric peak", NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
 
 	//  Use preceding functions about peak interferometric map.
-	if (pol != AnitaPol::kNotAPol) fillAllMaps(& filtEvent, & peakResponseMap, pol, neighboringAntennas);
+	if (pol != AnitaPol::kNotAPol) fillAllMaps(& filtEvent, & peakUnnormalizedResponseMap, pol, neighboringAntennas);
 	else {
 
-		fillAllMaps(& filtEvent, & peakResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
-		fillAllMaps(& filtEvent, & peakResponseMap, AnitaPol::kVertical, neighboringAntennas);
-		peakResponseMap.Scale(0.5);
+		fillAllMaps(& filtEvent, & peakUnnormalizedResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
+		fillAllMaps(& filtEvent, & peakUnnormalizedResponseMap, AnitaPol::kVertical, neighboringAntennas);
+		peakUnnormalizedResponseMap.Scale(0.5);
 	}
 
 	//  Return pointer to peak interferometric map.
-	return peakResponseMap;
+	return peakUnnormalizedResponseMap;
 }
 
 /*
@@ -832,32 +832,32 @@ TH2D makePeakInterferometricMap(TH2D * responseMap, int eventNum, bool useBroadb
 	else if (responseMapName.Contains("Unpol", TString::kIgnoreCase)) polType = "Unpolarized";
 
 	//  Create TH2D objects from which to generate the peak interferometric map.
-	TH2D peakResponseMap("peakResponseMap", "Response around interferometric peak", NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
+	TH2D peakUnnormalizedResponseMap("peakUnnormalizedResponseMap", "Unnormalized response around interferometric peak", NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
 	TH2D peakCoverageMap("peakCoverageMap", "Antenna pair coverage around interferometric peak.", NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
-	TH2D peakNormalizedResponseMap("peakNormalizedResponseMap", TString::Format("%s normalized response around interferometric peak", polType), NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
+	TH2D peakResponseMap(!useBroadband ? "peakResponseMap" : "peakBroadbandResponseMap", !useBroadband ? TString::Format("%s response around interferometric peak", polType) : TString::Format("%s broadband response around interferometric peak", polType), NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
 
 	//  Use preceding functions about peak interferometric map.
 	if (responseMapName.Contains("HPol", TString::kIgnoreCase)) fillAllMaps(& filtEvent, & peakResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
 	else if (responseMapName.Contains("VPol", TString::kIgnoreCase)) fillAllMaps(& filtEvent, & peakResponseMap, AnitaPol::kVertical, neighboringAntennas);
 	else if (responseMapName.Contains("Unpol", TString::kIgnoreCase)) {
 
-		fillAllMaps(& filtEvent, & peakResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
-		fillAllMaps(& filtEvent, & peakResponseMap, AnitaPol::kVertical, neighboringAntennas);
+		fillAllMaps(& filtEvent, & peakUnnormalizedResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
+		fillAllMaps(& filtEvent, & peakUnnormalizedResponseMap, AnitaPol::kVertical, neighboringAntennas);
 	}
 
 	vector<TH2D> totalPowerMaps = getTotalPowerMaps(& filtEvent, true);
 
 	fillAllCoverageMaps(& peakCoverageMap, totalPowerMaps, neighboringAntennas);
 
-	peakNormalizedResponseMap.Add(& peakResponseMap);
-	peakNormalizedResponseMap.Divide(& peakCoverageMap);
-	if (!responseMapName.Contains("Unpol", TString::kIgnoreCase)) peakNormalizedResponseMap.Scale(2);
+	peakResponseMap.Add(& peakUnnormalizedResponseMap);
+	peakResponseMap.Divide(& peakCoverageMap);
+	if (!responseMapName.Contains("Unpol", TString::kIgnoreCase)) peakResponseMap.Scale(2);
 
-	peakNormalizedResponseMap.GetXaxis() -> SetTitle("#phi");
-	peakNormalizedResponseMap.GetYaxis() -> SetTitle("-#theta");
+	peakResponseMap.GetXaxis() -> SetTitle("#phi");
+	peakResponseMap.GetYaxis() -> SetTitle("-#theta");
 
 	//  Return pointer to peak interferometric map.
-	return peakNormalizedResponseMap;
+	return peakResponseMap;
 }
 
 
@@ -903,31 +903,31 @@ TH2D makePeakInterferometricMap(int eventNum, double peakPhi, double peakNegThet
 	else if (pol == AnitaPol::kNotAPol) polType = "Unpolarized";
 
 	//  Create TH2D objects from which to generate the peak interferometric map.
-	TH2D peakResponseMap("peakResponseMap", "Response around interferometric peak", NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
+	TH2D peakUnnormalizedResponseMap("peakUnnormalizedResponseMap", "Unnormalized response around interferometric peak", NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
 	TH2D peakCoverageMap("peakCoverageMap", "Antenna pair coverage around interferometric peak.", NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
-	TH2D peakNormalizedResponseMap("peakNormalizedResponseMap", TString::Format("%s normalized response around interferometric peak", polType), NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
+	TH2D peakResponseMap(!useBroadband ? "peakResponseMap" : "peakBroadbandResponseMap", !useBroadband ? TString::Format("%s response around interferometric peak", polType) : TString::Format("%s broadband response around interferometric peak", polType), NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
 
 	//  Use preceding functions about peak interferometric map.
-	if (pol != AnitaPol::kNotAPol) fillAllMaps(& filtEvent, & peakResponseMap, pol, neighboringAntennas);
+	if (pol != AnitaPol::kNotAPol) fillAllMaps(& filtEvent, & peakUnnormalizedResponseMap, pol, neighboringAntennas);
 	else {
 
-		fillAllMaps(& filtEvent, & peakResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
-		fillAllMaps(& filtEvent, & peakResponseMap, AnitaPol::kVertical, neighboringAntennas);
+		fillAllMaps(& filtEvent, & peakUnnormalizedResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
+		fillAllMaps(& filtEvent, & peakUnnormalizedResponseMap, AnitaPol::kVertical, neighboringAntennas);
 	}
 
 	vector<TH2D> totalPowerMaps = getTotalPowerMaps(& filtEvent, true);
 
 	fillAllCoverageMaps(& peakCoverageMap, totalPowerMaps, neighboringAntennas);
 
-	peakNormalizedResponseMap.Add(& peakResponseMap);
-	peakNormalizedResponseMap.Divide(& peakCoverageMap);
-	if (pol != AnitaPol::kNotAPol) peakNormalizedResponseMap.Scale(2);
+	peakResponseMap.Add(& peakUnnormalizedResponseMap);
+	peakResponseMap.Divide(& peakCoverageMap);
+	if (pol != AnitaPol::kNotAPol) peakResponseMap.Scale(2);
 
-	peakNormalizedResponseMap.GetXaxis() -> SetTitle("#phi");
-	peakNormalizedResponseMap.GetYaxis() -> SetTitle("-#theta");
+	peakResponseMap.GetXaxis() -> SetTitle("#phi");
+	peakResponseMap.GetYaxis() -> SetTitle("-#theta");
 
 	//  Return pointer to peak interferometric map.
-	return peakNormalizedResponseMap;
+	return peakResponseMap;
 }
 
 
@@ -1147,20 +1147,20 @@ TH2D makePeakUnnormalizedFlatInterferometricMap(TH2D * responseMap, int eventNum
 	else if (responseMapName.Contains("Unpol", TString::kIgnoreCase)) polType = "Unpolarized";
 
 	//  Create TH2D objects from which to generate the peak interferometric map.
-	TH2D peakFlatResponseMap("peakFlatResponseMap", "Flat response around interferometric peak", NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
+	TH2D peakUnnormalizedFlatResponseMap("peakUnnormalizedFlatResponseMap", "Unnormalized flat response around interferometric peak", NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
 
 	//  Use preceding functions about peak interferometric map.
-	if (responseMapName.Contains("HPol", TString::kIgnoreCase)) fillAllFlatMaps(& filtEvent, & peakFlatResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
-	else if (responseMapName.Contains("VPol", TString::kIgnoreCase)) fillAllFlatMaps(& filtEvent, & peakFlatResponseMap, AnitaPol::kVertical, neighboringAntennas);
+	if (responseMapName.Contains("HPol", TString::kIgnoreCase)) fillAllFlatMaps(& filtEvent, & peakUnnormalizedFlatResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
+	else if (responseMapName.Contains("VPol", TString::kIgnoreCase)) fillAllFlatMaps(& filtEvent, & peakUnnormalizedFlatResponseMap, AnitaPol::kVertical, neighboringAntennas);
 	else if (responseMapName.Contains("Unpol", TString::kIgnoreCase)) {
 
-		fillAllFlatMaps(& filtEvent, & peakFlatResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
-		fillAllFlatMaps(& filtEvent, & peakFlatResponseMap, AnitaPol::kVertical, neighboringAntennas);
-		peakFlatResponseMap.Scale(0.5);
+		fillAllFlatMaps(& filtEvent, & peakUnnormalizedFlatResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
+		fillAllFlatMaps(& filtEvent, & peakUnnormalizedFlatResponseMap, AnitaPol::kVertical, neighboringAntennas);
+		peakUnnormalizedFlatResponseMap.Scale(0.5);
 	}
 
 	//  Return pointer to peak interferometric map.
-	return peakFlatResponseMap;
+	return peakUnnormalizedFlatResponseMap;
 }
 
 
@@ -1205,19 +1205,19 @@ TH2D makePeakUnnormalizedFlatInterferometricMap(int eventNum, double peakPhi, do
 	else if (pol == AnitaPol::kNotAPol) polType = "Unpolarized";
 
 	//  Create TH2D objects from which to generate the peak interferometric map.
-	TH2D peakFlatResponseMap("peakFlatResponseMap", "Flat response around interferometric peak", NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
+	TH2D peakUnnormalizedFlatResponseMap("peakUnnormalizedFlatResponseMap", "Unnormalized flat response around interferometric peak", NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
 
 	//  Use preceding functions about peak interferometric map.
-	if (pol != AnitaPol::kNotAPol) fillAllFlatMaps(& filtEvent, & peakFlatResponseMap, pol, neighboringAntennas);
+	if (pol != AnitaPol::kNotAPol) fillAllFlatMaps(& filtEvent, & peakUnnormalizedFlatResponseMap, pol, neighboringAntennas);
 	else {
 
-		fillAllFlatMaps(& filtEvent, & peakFlatResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
-		fillAllFlatMaps(& filtEvent, & peakFlatResponseMap, AnitaPol::kVertical, neighboringAntennas);
-		peakFlatResponseMap.Scale(0.5);
+		fillAllFlatMaps(& filtEvent, & peakUnnormalizedFlatResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
+		fillAllFlatMaps(& filtEvent, & peakUnnormalizedFlatResponseMap, AnitaPol::kVertical, neighboringAntennas);
+		peakUnnormalizedFlatResponseMap.Scale(0.5);
 	}
 
 	//  Return pointer to peak interferometric map.
-	return peakFlatResponseMap;
+	return peakUnnormalizedFlatResponseMap;
 }
 
 
@@ -1267,32 +1267,32 @@ TH2D makePeakFlatInterferometricMap(TH2D * responseMap, int eventNum, TString fi
 	else if (responseMapName.Contains("Unpol", TString::kIgnoreCase)) polType = "Unpolarized";
 
 	//  Create TH2D objects from which to generate the peak interferometric map.
-	TH2D peakFlatResponseMap("peakFlatResponseMap", "Flat response around interferometric peak", NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
+	TH2D peakUnnormalizedFlatResponseMap("peakUnnormalizedFlatResponseMap", "Unnormalized flat response around interferometric peak", NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
 	TH2D peakFlatCoverageMap("peakFlatCoverageMap", "Antenna pair flat coverage around interferometric peak.", NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
-	TH2D peakFlatNormalizedResponseMap("peakFlatNormalizedResponseMap", TString::Format("%s flat normalized response around interferometric peak", polType), NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
+	TH2D peakFlatResponseMap("peakFlatResponseMap", TString::Format("%s flat response around interferometric peak", polType), NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
 
 	//  Use preceding functions about peak interferometric map.
-	if (responseMapName.Contains("HPol", TString::kIgnoreCase)) fillAllFlatMaps(& filtEvent, & peakFlatResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
-	else if (responseMapName.Contains("VPol", TString::kIgnoreCase)) fillAllFlatMaps(& filtEvent, & peakFlatResponseMap, AnitaPol::kVertical, neighboringAntennas);
+	if (responseMapName.Contains("HPol", TString::kIgnoreCase)) fillAllFlatMaps(& filtEvent, & peakUnnormalizedFlatResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
+	else if (responseMapName.Contains("VPol", TString::kIgnoreCase)) fillAllFlatMaps(& filtEvent, & peakUnnormalizedFlatResponseMap, AnitaPol::kVertical, neighboringAntennas);
 	else if (responseMapName.Contains("Unpol", TString::kIgnoreCase)) {
 
-		fillAllFlatMaps(& filtEvent, & peakFlatResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
-		fillAllFlatMaps(& filtEvent, & peakFlatResponseMap, AnitaPol::kVertical, neighboringAntennas);
+		fillAllFlatMaps(& filtEvent, & peakUnnormalizedFlatResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
+		fillAllFlatMaps(& filtEvent, & peakUnnormalizedFlatResponseMap, AnitaPol::kVertical, neighboringAntennas);
 	}
 
 	vector<pair<double, double>> totalPowers = getEventTotalPowers(& filtEvent);
 
 	fillAllFlatCoverageMaps(& peakFlatCoverageMap, totalPowers, neighboringAntennas);
 
-	peakFlatNormalizedResponseMap.Add(& peakFlatResponseMap);
-	peakFlatNormalizedResponseMap.Divide(& peakFlatCoverageMap);
-	if (!responseMapName.Contains("Unpol", TString::kIgnoreCase)) peakFlatNormalizedResponseMap.Scale(2);
+	peakFlatResponseMap.Add(& peakUnnormalizedFlatResponseMap);
+	peakFlatResponseMap.Divide(& peakFlatCoverageMap);
+	if (!responseMapName.Contains("Unpol", TString::kIgnoreCase)) peakFlatResponseMap.Scale(2);
 
-	peakFlatNormalizedResponseMap.GetXaxis() -> SetTitle("#phi");
-	peakFlatNormalizedResponseMap.GetYaxis() -> SetTitle("-#theta");
+	peakFlatResponseMap.GetXaxis() -> SetTitle("#phi");
+	peakFlatResponseMap.GetYaxis() -> SetTitle("-#theta");
 
 	//  Return pointer to peak interferometric map.
-	return peakFlatNormalizedResponseMap;
+	return peakFlatResponseMap;
 }
 
 
@@ -1337,29 +1337,29 @@ TH2D makePeakFlatInterferometricMap(int eventNum, double peakPhi, double peakNeg
 	else if (pol == AnitaPol::kNotAPol) polType = "Unpolarized";
 
 	//  Create TH2D objects from which to generate the peak interferometric map.
-	TH2D peakFlatResponseMap("peakFlatResponseMap", "Flat response around interferometric peak", NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
+	TH2D peakUnnormalizedFlatResponseMap("peakUnnormalizedFlatResponseMap", "Unnormalized flat response around interferometric peak", NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
 	TH2D peakFlatCoverageMap("peakFlatCoverageMap", "Antenna pair flat coverage around interferometric peak.", NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
-	TH2D peakFlatNormalizedResponseMap("peakFlatNormalizedResponseMap", TString::Format("%s flat normalized response around interferometric peak", polType), NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
+	TH2D peakFlatResponseMap("peakFlatResponseMap", TString::Format("%s flat response around interferometric peak", polType), NPhiZoom, minPhi, maxPhi, NNegThetaZoom, minNegTheta, maxNegTheta);
 
 	//  Use preceding functions about peak interferometric map.
-	if (pol != AnitaPol::kNotAPol) fillAllFlatMaps(& filtEvent, & peakFlatResponseMap, pol, neighboringAntennas);
+	if (pol != AnitaPol::kNotAPol) fillAllFlatMaps(& filtEvent, & peakUnnormalizedFlatResponseMap, pol, neighboringAntennas);
 	else {
 
-		fillAllFlatMaps(& filtEvent, & peakFlatResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
-		fillAllFlatMaps(& filtEvent, & peakFlatResponseMap, AnitaPol::kVertical, neighboringAntennas);
+		fillAllFlatMaps(& filtEvent, & peakUnnormalizedFlatResponseMap, AnitaPol::kHorizontal, neighboringAntennas);
+		fillAllFlatMaps(& filtEvent, & peakUnnormalizedFlatResponseMap, AnitaPol::kVertical, neighboringAntennas);
 	}
 
 	vector<pair<double, double>> totalPowers = getEventTotalPowers(& filtEvent);
 
 	fillAllFlatCoverageMaps(& peakFlatCoverageMap, totalPowers, neighboringAntennas);
 
-	peakFlatNormalizedResponseMap.Add(& peakFlatResponseMap);
-	peakFlatNormalizedResponseMap.Divide(& peakFlatCoverageMap);
-	if (pol != AnitaPol::kNotAPol) peakFlatNormalizedResponseMap.Scale(2);
+	peakFlatResponseMap.Add(& peakUnnormalizedFlatResponseMap);
+	peakFlatResponseMap.Divide(& peakFlatCoverageMap);
+	if (pol != AnitaPol::kNotAPol) peakFlatResponseMap.Scale(2);
 
-	peakFlatNormalizedResponseMap.GetXaxis() -> SetTitle("#phi");
-	peakFlatNormalizedResponseMap.GetYaxis() -> SetTitle("-#theta");
+	peakFlatResponseMap.GetXaxis() -> SetTitle("#phi");
+	peakFlatResponseMap.GetYaxis() -> SetTitle("-#theta");
 
 	//  Return pointer to peak interferometric map.
-	return peakFlatNormalizedResponseMap;
+	return peakFlatResponseMap;
 }
