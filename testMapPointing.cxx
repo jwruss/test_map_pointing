@@ -78,9 +78,10 @@ void addPolTree(int part, bool isVPol = false) {
 	pointingTree.Branch("normalizedBroadband", & normalizedBroadband, structStr);
 
 	//  Iterate through the summary file, creating finely binned interferometric maps and extracting peak location and value.
-//	int numEntries = sumTree -> GetEntries() > 15 ? 15 : sumTree -> GetEntries();
 	int numEntries = sumTree -> GetEntries();
-	for (int entryNum = 0; entryNum < numEntries; ++entryNum) {
+//	int unitStep = 1;
+	int unitStep = numEntries > 12 ? numEntries / 12 : 1;
+	for (int entryNum = 0; entryNum < numEntries; entryNum += unitStep) {
 
 		sumTree -> GetEntry(entryNum);
 
